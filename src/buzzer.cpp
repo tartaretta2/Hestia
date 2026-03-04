@@ -2,7 +2,10 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include <gpiod.h>
+
+#ifndef SIM
+    #include <gpiod.h>
+#endif
 
 using namespace std;
 
@@ -42,23 +45,13 @@ void initBuzzer(const char* GPIO_CHIP, const unsigned int BUZZER_PIN){
 void toggleBuzzer(const unsigned int BUZZER_PIN){
     if(!request) return;
 
-    int i, j;
-    for(i = 0; i < 10; ++i){
-        for(j = 0; j < 5; ++j){
-            gpiod_line_request_set_value(request, BUZZER_PIN, GPIOD_LINE_VALUE_ACTIVE);
-            this_thread::sleep_for(chrono::milliseconds(40));
-            gpiod_line_request_set_value(request, BUZZER_PIN, GPIOD_LINE_VALUE_INACTIVE);
-            this_thread::sleep_for(chrono::milliseconds(10));
-        }
-
-        for(j = 0; j < 5; ++j){
-            gpiod_line_request_set_value(request, BUZZER_PIN, GPIOD_LINE_VALUE_ACTIVE);
-            this_thread::sleep_for(chrono::milliseconds(90));
-            gpiod_line_request_set_value(request, BUZZER_PIN, GPIOD_LINE_VALUE_INACTIVE);
-            this_thread::sleep_for(chrono::milliseconds(30));
-        }
+    int i;
+    for(i = 0; i < 5; ++i){
+        gpiod_line_request_set_value(request, BUZZER_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        this_thread::sleep_for(chrono::milliseconds(70));
+        gpiod_line_request_set_value(request, BUZZER_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        this_thread::sleep_for(chrono::milliseconds(30));
     }
-    
 }
 
 void cleanupBuzzer(){
@@ -69,10 +62,5 @@ void cleanupBuzzer(){
 #endif
 
 void simulateBuzzer(){
-    //Buzzer simulation: turn on buzzer for 5 seconds
-    int i;
-    for(i = 0; i < 5; ++i){
-        cout << "BUZZER ON" << endl;
-        this_thread::sleep_for(chrono::milliseconds(500));
-    }
+    cout << "BUZZER ON" << endl;
 }

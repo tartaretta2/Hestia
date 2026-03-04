@@ -24,15 +24,19 @@ int readSensor(){
     #endif
 }
 
+
 void alarm(){
-    #ifdef SIM
-        simulateLED();
-        simulateBuzzer();
-    #else
-        simulateLED();
-        //toggleLED();
-        toggleBuzzer(BUZZER_PIN);
-    #endif
+    int i;
+    for(i = 0; i < 5; ++i){
+        #ifndef SIM
+            toggleLED(LED_PIN);
+            toggleBuzzer(BUZZER_PIN);
+            this_thread::sleep_for(chrono::milliseconds(500));
+        #else
+            simulateLED();
+            simulateBuzzer();   
+        #endif
+    }
 }
 
 void MSListener(){
@@ -50,6 +54,7 @@ void MSListener(){
 int main(){
     #ifndef SIM
         initBuzzer(GPIO_CHIP, BUZZER_PIN);
+        initLED(GPIO_CHIP, LED_PIN);
     #endif
 
     thread listener(MSListener);
@@ -61,6 +66,7 @@ int main(){
 
     #ifndef SIM
         cleanupBuzzer();
+        cleanupLED();
     #endif
    
     cout << "System shut down." << endl;
