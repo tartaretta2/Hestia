@@ -1,6 +1,6 @@
 CC = g++
 CFLAGS = -Wall -I./include
-LIBS = -lgpiod
+LIBS = -lgpiod -lpthread
 SRC = src/main.cpp src/motion_sensor.cpp src/led.cpp src/buzzer.cpp
 TARGET = build/alarm
 

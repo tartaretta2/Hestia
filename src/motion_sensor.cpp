@@ -9,13 +9,14 @@ using namespace std;
 
 #ifndef SIM
 static gpiod_chip* chip = nullptr;
-static gpiod_line* line = nullptr;
+static gpiod_line_request* request = nullptr;
 
-void initMS(int GPIO_CHIP, int MS_PIN){
+void initMS(const char* GPIO_CHIP, const unsigned int MS_PIN){
         // 1. Apri il chip
+    cout << "Initializing Motion Sensor on GPIO chip: " << GPIO_CHIP << ", pin: " << MS_PIN << endl;
     chip = gpiod_chip_open(GPIO_CHIP);
     if (!chip) {
-        std::cerr << "Failed to open GPIO chip" << std::endl;
+        cerr << gpiod_chip_get_info(chip) << endl << "Failed to open GPIO chip" << endl;
         return;
     }
 
@@ -36,7 +37,7 @@ void initMS(int GPIO_CHIP, int MS_PIN){
     // 5. Fai la richiesta
     request = gpiod_chip_request_lines(chip, req_cfg, line_cfg);
     if (!request) {
-        std::cerr << "Failed to request GPIO line" << std::endl;
+        cerr << "Failed to request GPIO line" << endl;
     }
 
     // 6. Libera le config (non servono più dopo la request)
@@ -57,7 +58,6 @@ int readMS(){
         gpiod_edge_event* event = gpiod_edge_event_buffer_get_event(buffer, 0);
 
         if (gpiod_edge_event_get_event_type(event) == GPIOD_EDGE_EVENT_RISING_EDGE) {
-            std::cout << "Movimento rilevato!" << std::endl;
             gpiod_edge_event_buffer_free(buffer);
             return 4;
         }
