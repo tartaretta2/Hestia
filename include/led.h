@@ -1,7 +1,4 @@
-#ifndef __LED_H__
-#define __LED_H__
+#pragma once
 
 void simulateLED();
 void toggleLED();
-
-#endif

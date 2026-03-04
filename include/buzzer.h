@@ -1,7 +1,4 @@
-#ifndef __BUZZER_H__
-#define __BUZZER_H__
+#pragma once
 
 void simulateBuzzer();
 void toggleBuzzer();
-
-#endif

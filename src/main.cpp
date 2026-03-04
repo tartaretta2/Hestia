@@ -5,6 +5,13 @@
 #include <thread>
 #include <chrono>
 
+#ifndef SIM
+    #define GPIO_CHIP "/dev/gpiochp4"
+    #define MS_PIN 17
+    #define BUZZER_PIN 27
+    #define LED_PIN 22
+#endif
+
 using namespace std;
 
 int readSensor(){
@@ -26,6 +33,12 @@ void alarm(){
 }
 
 int main(){
+    #ifndef SIM
+        initMS(GPIO_CHIP, MS_PIN);
+        //initLED(LED_PIN);
+        //initBuzzer(BUZZER_PIN);
+    #endif
+
     int i, sensorRead;;
     for(i = 0; i < 10; ++i){
         sensorRead = readSensor();
