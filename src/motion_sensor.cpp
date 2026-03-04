@@ -12,7 +12,8 @@ static gpiod_chip* chip = nullptr;
 static gpiod_line_request* request = nullptr;
 
 void initMS(const char* GPIO_CHIP, const unsigned int MS_PIN){
-        // 1. Apri il chip
+        
+    // Open GPIO chip (to be moved to main)
     cout << "Initializing Motion Sensor on GPIO chip: " << GPIO_CHIP << ", pin: " << MS_PIN << endl;
     chip = gpiod_chip_open(GPIO_CHIP);
     if (!chip) {
@@ -27,23 +28,22 @@ void initMS(const char* GPIO_CHIP, const unsigned int MS_PIN){
     gpiod_line_settings_set_edge_detection(settings, GPIOD_LINE_EDGE_BOTH);
 
     // 3. Crea il line config e aggiungi il pin
-    gpiod_line_config* line_cfg = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(line_cfg, &MS_PIN, 1, settings);
+    gpiod_line_config* lineConf = gpiod_line_config_new();
+    gpiod_line_config_add_line_settings(lineConf, &MS_PIN, 1, settings);
 
     // 4. Crea il request config (consumer name)
-    gpiod_request_config* req_cfg = gpiod_request_config_new();
-    gpiod_request_config_set_consumer(req_cfg, "motion_sensor");
+    gpiod_request_config* requestConf = gpiod_request_config_new();
+    gpiod_request_config_set_consumer(requestConf, "motion_sensor");
 
     // 5. Fai la richiesta
-    request = gpiod_chip_request_lines(chip, req_cfg, line_cfg);
-    if (!request) {
-        cerr << "Failed to request GPIO line" << endl;
-    }
+    request = gpiod_chip_request_lines(chip, requestConf, lineConf);
+    if (!request) 
+        cerr << "Failed to request MS GPIO line" << endl;
 
     // 6. Libera le config (non servono più dopo la request)
     gpiod_line_settings_free(settings);
-    gpiod_line_config_free(line_cfg);
-    gpiod_request_config_free(req_cfg);
+    gpiod_line_config_free(lineConf);
+    gpiod_request_config_free(requestConf);
 }
 
 int readMS(){

@@ -30,9 +30,8 @@ void alarm(){
         simulateBuzzer();
     #else
         simulateLED();
-        simulateBuzzer();
         //toggleLED();
-        //toggleBuzzer();
+        toggleBuzzer(BUZZER_PIN);
     #endif
 }
 
@@ -49,7 +48,10 @@ void MSListener(){
 }
 
 int main(){
-    
+    #ifndef SIM
+        initBuzzer(GPIO_CHIP, BUZZER_PIN);
+    #endif
+
     thread listener(MSListener);
 
     cout << "System running. Press Enter to stop..." << endl;
@@ -57,7 +59,11 @@ int main(){
     running = false;
     listener.join();
 
-    cout << "Exiting..." << endl;
+    #ifndef SIM
+        cleanupBuzzer();
+    #endif
+   
+    cout << "System shut down." << endl;
 
     return 0;
 }
