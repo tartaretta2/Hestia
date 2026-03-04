@@ -27,8 +27,10 @@ void alarm(){
         simulateLED();
         simulateBuzzer();
     #else
-        toggleLED();
-        toggleBuzzer();
+        simulateLED();
+        simulateBuzzer();
+        //toggleLED();
+        //toggleBuzzer();
     #endif
 }
 
