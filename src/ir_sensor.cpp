@@ -33,12 +33,12 @@ static int g_active = 0;
 static void irqThread()
 {
     while (g_threadRun) {
-        // Aspetta un edge con timeout = NEC_FRAME_TIMEOUT us
-        // ret=1 edge arrivato, ret=0 timeout, ret<0 errore
-        int ret = gpiod_line_request_wait_edge_events(g_request, NEC_FRAME_TIMEOUT * 1000ULL);  // us -> ns
+
+        int ret = gpiod_line_request_wait_edge_events(
+                      g_request, NEC_FRAME_TIMEOUT * 1000ULL);
 
         if (ret < 0) {
-            cerr << "[IR] wait_edge_events error" << endl;
+            cerr << "[IR] wait_edge_events errore" << endl;
             break;
         }
 
@@ -50,8 +50,8 @@ static void irqThread()
                 lock_guard<mutex> lock(g_mutex);
                 if (g_receiving && g_buf[g_active].count > 0) {
                     frameToSend = g_buf[g_active];
-                    hasFrame = true;
-                    g_active = 1 - g_active;
+                    hasFrame    = true;
+                    g_active    = 1 - g_active;
                     g_buf[g_active] = IrRawFrame{};
                 }
                 g_receiving = false;
@@ -61,27 +61,33 @@ static void irqThread()
             continue;
         }
 
-        // Edge arrivato: leggi gli eventi dal buffer
+        // Edge arrivato: leggi l'evento
         int n = gpiod_line_request_read_edge_events(g_request, g_eventBuf, 1);
-        if (n < 0) {
-            cerr << "[IR] read_edge_events error" << endl;
-            continue;
-        }
+        if (n < 0) continue;
 
         for (int i = 0; i < n; i++) {
-            gpiod_edge_event* event = gpiod_edge_event_buffer_get_event(g_eventBuf, i);
+            gpiod_edge_event* event =
+                gpiod_edge_event_buffer_get_event(g_eventBuf, i);
 
-            // Timestamp dal kernel in nanosecondi -> microsecondi
             uint64_t tickUs = gpiod_edge_event_get_timestamp_ns(event) / 1000ULL;
-            bool level = (gpiod_edge_event_get_event_type(event) == GPIOD_EDGE_EVENT_RISING_EDGE);
-            
+            bool level = (gpiod_edge_event_get_event_type(event)
+                          == GPIOD_EDGE_EVENT_RISING_EDGE);
+
             lock_guard<mutex> lock(g_mutex);
+
             if (!g_receiving) {
-                if (!level) {
-                    g_lastTick = tickUs;
+                // Aggiorna sempre lastTick per misurare il silenzio
+                uint64_t silenzio = tickUs - g_lastTick;
+                g_lastTick = tickUs;
+
+                // Inizia a registrare solo su fronte di DISCESA (inizio burst)
+                // e solo dopo un silenzio lungo almeno NEC_FRAME_TIMEOUT:
+                // questo garantisce che siamo all'inizio del frame
+                if (!level && silenzio >= NEC_FRAME_TIMEOUT) {
                     g_receiving = true;
                 }
             } else {
+                // Siamo dentro un frame: registra durata e livello
                 IrRawFrame& frame = g_buf[g_active];
                 if (frame.count < IR_MAX_EDGES) {
                     frame.edges[frame.count] = IrEdge(

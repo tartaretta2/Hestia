@@ -15,7 +15,7 @@
 #define NEC_ONE_SPACE      1687
 #define NEC_ZERO_SPACE     562
 #define NEC_TOLERANCE      300   // tolleranza +/- per ogni misura
-#define NEC_LEADER_TOLERANCE 1500
+#define NEC_LEADER_TOLERANCE 2000
 #define NEC_FRAME_TIMEOUT  15000 // silenzio che indica fine frame
 #define IR_MAX_EDGES       128   // max edge per frame (67 bastano per NEC)
 

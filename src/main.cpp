@@ -17,7 +17,7 @@ void onRawFrame(const IrRawFrame& raw)
     if (!frame.valid) return;
 
     if (frame.isRepeat) {
-        cout << "[IR] <REPEAT> (Same key as before)" << endl;
+        //cout << "[IR] <REPEAT> (Same key as before)" << endl;
         return;
     }
 

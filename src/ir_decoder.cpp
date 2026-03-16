@@ -80,7 +80,7 @@ NecFrame decodeNEC(const IrRawFrame& raw)
 
     // Debounce: stesso tasto entro 300ms -> ignora
     uint64_t now = nowMs();
-    if (cmd == s_lastCmd && (now - s_lastTimeMs) < 300) {
+    if (cmd == s_lastCmd && (now - s_lastTimeMs) < 150) {
         return out;
     }
     s_lastCmd = cmd;
