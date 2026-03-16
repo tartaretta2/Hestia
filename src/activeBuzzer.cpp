@@ -54,7 +54,7 @@ void toggleBuzzer(const unsigned int BUZZER_PIN){
     }
 }
 
-void cleanupBuzzer(){
+void cleanupBuzzer(const unsigned int BUZZER_PIN){
     if(request) gpiod_line_request_release(request);
     if(chip) gpiod_chip_close(chip);
 }

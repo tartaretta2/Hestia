@@ -36,7 +36,7 @@ void toggleBuzzer(const unsigned int BUZZER_PIN){
     lgTxPwm(handle, BUZZER_PIN, 0, 0, 0, 0);
 }
 
-void cleanupBuzzer(){
+void cleanupBuzzer(const unsigned int BUZZER_PIN){
     lgGpioWrite(handle, BUZZER_PIN, 0);
     lgGpiochipClose(handle);
 }
