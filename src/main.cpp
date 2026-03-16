@@ -45,7 +45,6 @@ void alarm()
 
 void MSListener()
 {
-    initMS(GPIO_CHIP, MS_PIN);
 
     cout << "Motion Sensor Listener started." << endl;
     while (alarmOn)
@@ -55,7 +54,7 @@ void MSListener()
             cout << "Motion detected!" << endl;
             sirenOn = true;
             thread siren(alarm);
-            cout << "Alarm triggered. Press enter" << endl;
+            cout << "Alarm triggered. Press enter to stop." << endl;
             cin.get();
             sirenOn = false;
             siren.join();
@@ -68,6 +67,7 @@ int main()
 #ifndef SIM
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
     initLED(GPIO_CHIP, LED_PIN);
+    initMS(GPIO_CHIP, MS_PIN);
 #endif
 
     while (running)
@@ -83,7 +83,7 @@ int main()
     }
 
 #ifndef SIM
-    cleanupBuzzer();
+    cleanupBuzzer(BUZZER_PIN);
     cleanupLED();
 #endif
 

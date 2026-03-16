@@ -13,7 +13,8 @@ using namespace std;
 static int handle = -1;
 
 void initBuzzer(const char* GPIO_CHIP, const unsigned int BUZZER_PIN){
-    handle = lgGpiochipOpen(GPIO_CHIP);
+    handle = lgGpiochipOpen(4);
+    cout << "Initializing BUZZER on pin: " << BUZZER_PIN << endl;
     if (handle < 0) {
         std::cerr << "Failed to open GPIO chip" << std::endl;
         return;
