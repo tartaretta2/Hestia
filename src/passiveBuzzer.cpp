@@ -4,39 +4,41 @@
 #include <chrono>
 
 #ifndef SIM
-    #include <pigpio.h>
+    #include <lgpio.h>
 #endif
 
 using namespace std;
 
 #ifndef SIM
+static int handle = -1;
 
 void initBuzzer(const char* GPIO_CHIP, const unsigned int BUZZER_PIN){
-    if (gpioInitialise() < 0) {
-        cerr << "Failed to initialise pigpio" << endl;
+    handle = lgGpiochipOpen(GPIO_CHIP);
+    if (handle < 0) {
+        std::cerr << "Failed to open GPIO chip" << std::endl;
         return;
     }
-    gpioSetMode(BUZZER_PIN, PI_OUTPUT);
-    gpioWrite(BUZZER_PIN, 0);
-}
-
-void playTone(const unsigned int BUZZER_PIN, int frequency, int duration){
-    gpioHardwarePWM(BUZZER_PIN, frequency, 500000); // 50% duty cycle
-    this_thread::sleep_for(chrono::milliseconds(duration));
-    gpioWrite(BUZZER_PIN, 0);
+    lgGpioClaimOutput(handle, 0, BUZZER_PIN, 0);
 }
 
 void toggleBuzzer(const unsigned int BUZZER_PIN){
     int freq;
-    for(freq = 800; freq <= 1200; freq += 10)
-        playTone(BUZZER_PIN, freq, 20);
-    for(freq = 1200; freq >= 800; freq -= 10)
-        playTone(BUZZER_PIN, freq, 20);
+    for(freq = 800; freq <= 1200; freq += 10){
+        lgTxPwm(handle, BUZZER_PIN, freq, 50, 0, 0);
+        this_thread::sleep_for(chrono::milliseconds(20));
+    }
+        
+    for(freq = 1200; freq >= 800; freq -= 10){
+        lgTxPwm(handle, BUZZER_PIN, freq, 50, 0, 0);
+        this_thread::sleep_for(chrono::milliseconds(20));
+    }
+
+    lgTxPwm(handle, BUZZER_PIN, 0, 0, 0, 0);
 }
 
 void cleanupBuzzer(){
-    gpioWrite(BUZZER_PIN, 0);
-    gpioTerminate();
+    lgGpioWrite(handle, BUZZER_PIN, 0);
+    lgGpiochipClose(handle);
 }
 
 #endif
