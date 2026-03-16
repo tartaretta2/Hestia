@@ -9,7 +9,7 @@ sim:
 
 release:
 	mkdir -p build
-	$(CC) $(CFLAGS) $(SRC) -lpthread -llgpio -o $(TARGET)
+	$(CC) $(CFLAGS) $(SRC) -lpthread -lgpiod -o $(TARGET)
 
 clean:
 	rm -rf build

@@ -6,75 +6,99 @@
 #include <chrono>
 
 #ifndef SIM
-    #include <lgpio.h>
+    #include <gpiod.h>
 #endif
 
 using namespace std;
 
-// Stato interno
-static IrCallback g_callback;
-static mutex g_mutex;
+static IrCallback  g_callback;
+static mutex       g_mutex;
 
-// HW DEPENDENT SECTION
+// =============================================================================
+// HARDWARE REALE (gpiod v2 - interrupt driven)
+// =============================================================================
 #ifndef SIM
 
-static int g_chip = -1;
-static uint64_t g_lastTick = 0;
-static bool g_receiving = false;
-static IrRawFrame g_buf[2];
-static int g_active = 0;
-static thread g_timeoutThread;
-static atomic<bool> g_threadRun = false;
+static gpiod_chip*        g_chip      = nullptr;
+static gpiod_line_request* g_request  = nullptr;
+static gpiod_edge_event_buffer* g_eventBuf = nullptr;
+static thread             g_irqThread;
+static atomic<bool>       g_threadRun = false;
+static uint64_t           g_lastTick  = 0;
+static bool               g_receiving = false;
+static IrRawFrame         g_buf[2];
+static int                g_active    = 0;
 
-// Ritorna il tempo corrente in microsecondi
-static uint64_t nowUs()
-{
-    using namespace chrono;
-    return duration_cast<microseconds>(steady_clock::now().time_since_epoch()).count();
-}
-
-// Thread che rileva la fine del frame (silenzio > NEC_FRAME_TIMEOUT us)
-// lgpio non ha watchdog built-in, quindi controlliamo ogni 1ms
-static void timeoutThread()
+// Thread interrupt-driven: gpiod_line_request_wait_edge_events blocca
+// il thread finch� il kernel non riceve un interrupt hardware dal GPIO.
+// Non consuma CPU mentre aspetta.
+static void irqThread()
 {
     while (g_threadRun) {
-        this_thread::sleep_for(chrono::milliseconds(1));
-        lock_guard<mutex> lock(g_mutex);
-        if (g_receiving && (nowUs() - g_lastTick) >= NEC_FRAME_TIMEOUT) {
-            if (g_buf[g_active].count > 0) {
-                g_callback(g_buf[g_active]);   // passa il frame al decoder
-                g_active = 1 - g_active;       // svuota l'altro buffer
-                g_buf[g_active] = IrRawFrame{};
+
+        // Aspetta un edge con timeout = NEC_FRAME_TIMEOUT us
+        // ret=1 edge arrivato, ret=0 timeout, ret<0 errore
+        int ret = gpiod_line_request_wait_edge_events(
+                      g_request,
+                      NEC_FRAME_TIMEOUT * 1000ULL);  // us -> ns
+
+        if (ret < 0) {
+            cerr << "[IR] wait_edge_events errore" << endl;
+            break;
+        }
+
+        if (ret == 0) {
+            // Timeout: silenzio > 15ms -> fine frame
+            IrRawFrame frameToSend;
+            bool hasFrame = false;
+            {
+                lock_guard<mutex> lock(g_mutex);
+                if (g_receiving && g_buf[g_active].count > 0) {
+                    frameToSend = g_buf[g_active];
+                    hasFrame    = true;
+                    g_active    = 1 - g_active;
+                    g_buf[g_active] = IrRawFrame{};
+                }
+                g_receiving = false;
             }
-            g_receiving = false;
+            if (hasFrame)
+                g_callback(frameToSend);
+            continue;
+        }
+
+        // Edge arrivato: leggi gli eventi dal buffer
+        int n = gpiod_line_request_read_edge_events(g_request, g_eventBuf, 1);
+        if (n < 0) {
+            cerr << "[IR] read_edge_events errore" << endl;
+            continue;
+        }
+
+        for (int i = 0; i < n; i++) {
+            gpiod_edge_event* event =
+                gpiod_edge_event_buffer_get_event(g_eventBuf, i);
+
+            // Timestamp dal kernel in nanosecondi -> microsecondi
+            uint64_t tickUs = gpiod_edge_event_get_timestamp_ns(event) / 1000ULL;
+            bool level = (gpiod_edge_event_get_event_type(event)
+                          == GPIOD_EDGE_EVENT_RISING_EDGE);
+            
+            lock_guard<mutex> lock(g_mutex);
+            if (!g_receiving) {
+                if (!level) {
+                    g_lastTick  = tickUs;
+                    g_receiving = true;
+                }
+            } else {
+                IrRawFrame& frame = g_buf[g_active];
+                if (frame.count < IR_MAX_EDGES) {
+                    frame.edges[frame.count] = IrEdge(
+                        static_cast<uint32_t>(tickUs - g_lastTick), level);
+                    frame.count++;
+                }
+                g_lastTick = tickUs;
+            }
         }
     }
-}
-
-// Callback lgpio: chiamata su ogni fronte del pin GPIO
-// timestamp in nanosecondi, level = nuovo livello (0=LOW burst, 1=HIGH idle)
-static void edgeCallback(int /*chip*/, lgGpioAlert_p alert, void* /*userdata*/)
-{
-    uint64_t tickUs = alert->report.timestamp / 1000ULL;
-    bool level = alert->report.level;
-
-    lock_guard<mutex> lock(g_mutex);
-
-    if (!g_receiving) {
-        // Primo edge: memorizza solo il timestamp di partenza
-        g_lastTick = tickUs;
-        g_receiving = true;
-        return;
-    }
-
-    // Edge successivi: calcola durata dell'impulso appena finito
-    IrRawFrame& frame = g_buf[g_active];
-    if (frame.count < IR_MAX_EDGES) {
-        frame.edges[frame.count] = IrEdge(
-            static_cast<uint32_t>(tickUs - g_lastTick), level);
-        frame.count++;
-    }
-    g_lastTick = tickUs;
 }
 
 void initIR(IrCallback cb)
@@ -82,84 +106,92 @@ void initIR(IrCallback cb)
     g_callback = cb;
 
     // Apri /dev/gpiochip4 (RPi 5)
-    g_chip = lgGpiochipOpen(4);
-    if (g_chip < 0) {
-        cerr << "[IR] Errore apertura " << GPIO_CHIP << ": "
-             << lguErrorText(g_chip) << endl;
+    g_chip = gpiod_chip_open("/dev/gpiochip4");
+    if (!g_chip) {
+        cerr << "[IR] Errore apertura /dev/gpiochip4" << endl;
         return;
     }
 
-    // Input con pull-up: VS1838B � open-drain (idle=HIGH, burst=LOW)
-    int rc = lgGpioClaimInput(g_chip, LG_SET_PULL_UP, IR_PIN);
-    if (rc < 0) {
-        cerr << "[IR] lgGpioClaimInput fallito: " << lguErrorText(rc) << endl;
-        lgGpiochipClose(g_chip);
+    // Crea la configurazione della linea
+    gpiod_line_settings* settings = gpiod_line_settings_new();
+    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_INPUT);
+    gpiod_line_settings_set_bias(settings, GPIOD_LINE_BIAS_PULL_UP);
+    gpiod_line_settings_set_edge_detection(settings, GPIOD_LINE_EDGE_BOTH);
+
+    gpiod_line_config* lineConfig = gpiod_line_config_new();
+    unsigned int pin = IR_PIN;
+    gpiod_line_config_add_line_settings(lineConfig, &pin, 1, settings);
+
+    gpiod_request_config* reqConfig = gpiod_request_config_new();
+    gpiod_request_config_set_consumer(reqConfig, "ir_sensor");
+
+    // Richiedi la linea con interrupt su entrambi i fronti
+    g_request = gpiod_chip_request_lines(g_chip, reqConfig, lineConfig);
+
+    // Libera le configurazioni temporanee
+    gpiod_line_settings_free(settings);
+    gpiod_line_config_free(lineConfig);
+    gpiod_request_config_free(reqConfig);
+
+    if (!g_request) {
+        cerr << "[IR] gpiod_chip_request_lines fallito" << endl;
+        gpiod_chip_close(g_chip);
         return;
     }
 
-    // Registra callback su entrambi i fronti, debounce=0 (precisione us)
-    rc = lgGpioSetAlertsFunc(g_chip, IR_PIN, edgeCallback, nullptr);
-    if (rc < 0) {
-        cerr << "[IR] lgGpioSetAlertsFunc fallito: " << lguErrorText(rc) << endl;
-        lgGpiochipClose(g_chip);
-        return;
-    }
-    lgGpioSetDebounce(g_chip, IR_PIN, 0);
+    // Buffer per leggere gli eventi
+    g_eventBuf = gpiod_edge_event_buffer_new(1);
 
-    // Avvia il thread di rilevamento fine-frame
-    g_threadRun    = true;
-    g_timeoutThread = thread(timeoutThread);
+    g_threadRun = true;
+    g_irqThread = thread(irqThread);
 
-    cout << "[IR] Hardware pronto su GPIO " << IR_PIN << endl;
+    cout << "[IR] Hardware pronto su GPIO " << IR_PIN
+         << " (interrupt-driven, gpiod v2)" << endl;
 }
 
 void cleanupIR()
 {
     g_threadRun = false;
-    if (g_timeoutThread.joinable()) g_timeoutThread.join();
-    lgGpioFree(g_chip, IR_PIN);
-    lgGpiochipClose(g_chip);
+    if (g_irqThread.joinable()) g_irqThread.join();
+    gpiod_edge_event_buffer_free(g_eventBuf);
+    gpiod_line_request_release(g_request);
+    gpiod_chip_close(g_chip);
     cout << "[IR] Hardware rilasciato." << endl;
 }
 
-// HW INDEPENDENT SECTION
-// Compilata solo con -DSIM
+// =============================================================================
+// SIMULAZIONE
+// =============================================================================
 #else
 
-static thread g_simThread;
+static thread       g_simThread;
 static atomic<bool> g_simRun = false;
 
-// Costruisce un frame NEC sintetico dato un command byte.
-// Produce la stessa identica sequenza di edge del telecomando fisico,
-// cos� il decoder non sa che � simulato.
 static IrRawFrame buildNecFrame(uint8_t cmd)
 {
     IrRawFrame frame;
-    uint8_t addr = 0x00;
+    uint8_t addr    = 0x00;
     uint8_t addrInv = static_cast<uint8_t>(~addr);
-    uint8_t cmdInv = static_cast<uint8_t>(~cmd);
+    uint8_t cmdInv  = static_cast<uint8_t>(~cmd);
 
-    // 32 bit: addr(8) | ~addr(8) | cmd(8) | ~cmd(8), LSB first
-    uint32_t data = (static_cast<uint32_t>(cmdInv) << 24) |
-                    (static_cast<uint32_t>(cmd) << 16) |
-                    (static_cast<uint32_t>(addrInv) <<  8) |
+    uint32_t data = (static_cast<uint32_t>(cmdInv)  << 24) |
+                    (static_cast<uint32_t>(cmd)      << 16) |
+                    (static_cast<uint32_t>(addrInv)  <<  8) |
                     (static_cast<uint32_t>(addr));
 
     int i = 0;
-    frame.edges[i++] = IrEdge(NEC_LEADER_BURST, true);   // leader burst
-    frame.edges[i++] = IrEdge(NEC_LEADER_SPACE, false);  // leader space
-
+    frame.edges[i++] = IrEdge(NEC_LEADER_BURST, true);
+    frame.edges[i++] = IrEdge(NEC_LEADER_SPACE, false);
     for (int bit = 0; bit < 32; bit++) {
         uint32_t space = (data & (1u << bit)) ? NEC_ONE_SPACE : NEC_ZERO_SPACE;
-        frame.edges[i++] = IrEdge(NEC_BIT_BURST, true);  // burst fisso
-        frame.edges[i++] = IrEdge(space, false); // spazio variabile
+        frame.edges[i++] = IrEdge(NEC_BIT_BURST, true);
+        frame.edges[i++] = IrEdge(space, false);
     }
-    frame.edges[i++] = IrEdge(NEC_BIT_BURST, true);  // stop burst
+    frame.edges[i++] = IrEdge(NEC_BIT_BURST, true);
     frame.count = i;
     return frame;
 }
 
-// Codici dei tasti Elegoo da simulare in sequenza
 static const uint8_t SIM_KEYS[] = {
     0x45,  // POWER  -> AlarmToggle
     0x0C,  // 1      -> LightsToggle
@@ -175,18 +207,16 @@ static void simThread()
     while (g_simRun) {
         this_thread::sleep_for(chrono::seconds(2));
         if (!g_simRun) break;
-
         IrRawFrame frame = buildNecFrame(SIM_KEYS[idx % size(SIM_KEYS)]);
         idx++;
-
-        g_callback(frame);  // senza lock: il frame � gi� costruito, non serve
+        g_callback(frame);
     }
 }
 
 void initIR(IrCallback cb)
 {
-    g_callback = cb;
-    g_simRun = true;
+    g_callback  = cb;
+    g_simRun    = true;
     g_simThread = thread(simThread);
     cout << "[IR] Simulazione attiva. Un tasto ogni 2 secondi." << endl;
 }
