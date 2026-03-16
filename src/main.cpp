@@ -15,60 +15,78 @@
 using namespace std;
 
 atomic<bool> running(true);
+atomic<bool> alarmOn(false);
+atomic<bool> sirenOn(false);
 
-int readSensor(){
+int readSensor()
+{
     #ifdef SIM
-        return simulateMS();
+      return simulateMS();
     #else
         return readMS();
     #endif
 }
 
-
-void alarm(){
+void alarm()
+{
     int i;
-    for(i = 0; i < 5; ++i){
+    while (sirenOn)
+    {
         #ifndef SIM
             toggleLED(LED_PIN);
             toggleBuzzer(BUZZER_PIN);
             this_thread::sleep_for(chrono::milliseconds(500));
         #else
             simulateLED();
-            simulateBuzzer();   
+            simulateBuzzer();
         #endif
     }
 }
 
-void MSListener(){
+void MSListener()
+{
     initMS(GPIO_CHIP, MS_PIN);
-    
-    cout << "Motion Sensor Listener started..." << endl;
-    while(running){
-        if(readSensor()){
-            cout << "Motion detected! Triggering alarm..." << endl;
-            alarm();
+
+    cout << "Motion Sensor Listener started." << endl;
+    while (alarmOn)
+    {
+        if (readSensor())
+        {
+            cout << "Motion detected!" << endl;
+            sirenOn = true;
+            thread siren(alarm);
+            cout << "Alarm triggered. Press enter" << endl;
+            cin.get();
+            sirenOn = false;
+            siren.join();
         }
     }
 }
 
-int main(){
-    #ifndef SIM
-        initBuzzer(GPIO_CHIP, BUZZER_PIN);
-        initLED(GPIO_CHIP, LED_PIN);
-    #endif
+int main()
+{
+#ifndef SIM
+    initBuzzer(GPIO_CHIP, BUZZER_PIN);
+    initLED(GPIO_CHIP, LED_PIN);
+#endif
 
-    thread listener(MSListener);
+    while (running)
+    {
+        cout << "Press Enter to turn on the alarm system." << endl;
+        cin.get();
+        alarmOn = true;
+        thread listener(MSListener);
+        cout << "Alarm activated. Press Enter to stop." << endl;
+        cin.get();
+        alarmOn = false;
+        listener.join();
+    }
 
-    cout << "System running. Press Enter to stop..." << endl;
-    cin.get();
-    running = false;
-    listener.join();
+#ifndef SIM
+    cleanupBuzzer();
+    cleanupLED();
+#endif
 
-    #ifndef SIM
-        cleanupBuzzer();
-        cleanupLED();
-    #endif
-   
     cout << "System shut down." << endl;
 
     return 0;
