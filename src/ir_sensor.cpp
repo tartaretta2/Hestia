@@ -175,10 +175,11 @@ static void simThread()
     while (g_simRun) {
         this_thread::sleep_for(chrono::seconds(2));
         if (!g_simRun) break;
+
         IrRawFrame frame = buildNecFrame(SIM_KEYS[idx % size(SIM_KEYS)]);
         idx++;
-        lock_guard<mutex> lock(g_mutex);
-        g_callback(frame);
+
+        g_callback(frame);  // senza lock: il frame � gi� costruito, non serve
     }
 }
 

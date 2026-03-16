@@ -27,11 +27,7 @@ void onRawFrame(const IrRawFrame& raw)
 
 int main()
 {
-#ifndef SIM
-    initIR(onRawFrame);
-#else
-    initIR(onRawFrame);
-#endif
+    cerr << "Debug: main partito" << endl;
 
     cout << "=== Smart House IR Remote ===" << endl;
 #ifdef SIM
@@ -40,10 +36,13 @@ int main()
     cout << "Modalita': HARDWARE (GPIO " << IR_PIN << ")" << endl;
 #endif
     cout << "Premi Invio per uscire." << endl;
-    cin.ignore();
-    cin.get();
-    running = false;
 
+    initIR(onRawFrame);  // avvia dopo i cout, cos� li vedi sempre
+
+    string line;
+    getline(cin, line);  // aspetta Invio, senza consumare nulla prima
+
+    running = false;
     cleanupIR();
     cout << "Sistema spento." << endl;
     return 0;
