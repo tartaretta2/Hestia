@@ -4,15 +4,15 @@
 #include "ir_sensor.h"
 #include <cstdint>
 
-// Frame NEC decodificato
+// NEC frame decoded
 struct NecFrame {
-    uint8_t address;    // indirizzo dispositivo (8 bit)
-    uint8_t command;    // codice tasto (8 bit)
-    bool isRepeat;      // true = tasto tenuto premuto
-    bool valid;         // false = frame corrotto, da ignorare
+    uint8_t address;    // device address (8 bit)
+    uint8_t command;    // key code (8 bit)
+    bool isRepeat;      // true = key being held
+    bool valid;         // false = corrupted frame, ignored
 };
 
-// Decodifica un frame grezzo in NecFrame
+// Decode raw frame into NecFrame
 NecFrame decodeNEC(const IrRawFrame& raw);
 
 #endif

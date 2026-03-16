@@ -3,7 +3,7 @@
 
 #include <cstdint>
 
-// Codici NEC del telecomando Elegoo
+// NEC codes for Elegoo remote
 #define KEY_POWER       0x45
 #define KEY_VOL_UP      0x46
 #define KEY_FUNC_STOP   0x47
@@ -26,32 +26,32 @@
 #define KEY_8           0x52
 #define KEY_9           0x4A
 
-// Azioni smart house gestite dal telecomando
+// Smart house function controlled by the remote
 enum class Action {
     None,
-    AlarmToggle,     // POWER -> accendi/spegni allarme
-    LightsToggle,    // 1     -> accendi/spegni luci
-    GateToggle,      // 2     -> apri/chiudi cancello
-    HeatingToggle,   // 3     -> accendi/spegni riscaldamento
-    LightsUp,        // VOL+  -> aumenta luminosit�
-    LightsDown,      // VOL-  -> diminuisci luminosit�
+    AlarmToggle,     // POWER -> alarm on/off
+    LightsToggle,    // 1     -> lights on/off
+    GateToggle,      // 2     -> gate open/close
+    HeatingToggle,   // 3     -> heating on/off
+    LightsUp,        // VOL+  -> aumenta luminosità
+    LightsDown,      // VOL-  -> diminuisci luminosità
     Unknown
 };
 
-// Descrittore tasto
+// Key description
 struct Key {
     uint8_t code;
     const char* name;
     Action action;
 };
 
-// Cerca un tasto nella tabella, ritorna nullptr se non trovato
+// Search fot a key in among the codes, if none is found, nullptr is returned
 const Key* lookupKey(uint8_t code);
 
-// Ritorna il nome stringa di un'azione
+// Return the name of the action name
 const char* actionName(Action a);
 
-// Gestisce un tasto: stampa info e chiama l'azione giusta
+// Handle the action and print the infos about a key
 void handleKey(uint8_t code);
 
 #endif

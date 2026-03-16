@@ -11,39 +11,34 @@
 
 using namespace std;
 
-static IrCallback  g_callback;
-static mutex       g_mutex;
+static IrCallback g_callback;
+static mutex g_mutex;
 
-// =============================================================================
-// HARDWARE REALE (gpiod v2 - interrupt driven)
-// =============================================================================
+// On-board mode - HW dependent
 #ifndef SIM
 
-static gpiod_chip*        g_chip      = nullptr;
-static gpiod_line_request* g_request  = nullptr;
+static gpiod_chip* g_chip = nullptr;
+static gpiod_line_request* g_request = nullptr;
 static gpiod_edge_event_buffer* g_eventBuf = nullptr;
-static thread             g_irqThread;
-static atomic<bool>       g_threadRun = false;
-static uint64_t           g_lastTick  = 0;
-static bool               g_receiving = false;
-static IrRawFrame         g_buf[2];
-static int                g_active    = 0;
+static thread g_irqThread;
+static atomic<bool> g_threadRun = false;
+static uint64_t g_lastTick = 0;
+static bool g_receiving = false;
+static IrRawFrame g_buf[2];
+static int g_active = 0;
 
 // Thread interrupt-driven: gpiod_line_request_wait_edge_events blocca
-// il thread finch� il kernel non riceve un interrupt hardware dal GPIO.
+// il thread finchè il kernel non riceve un interrupt hardware dal GPIO.
 // Non consuma CPU mentre aspetta.
 static void irqThread()
 {
     while (g_threadRun) {
-
         // Aspetta un edge con timeout = NEC_FRAME_TIMEOUT us
         // ret=1 edge arrivato, ret=0 timeout, ret<0 errore
-        int ret = gpiod_line_request_wait_edge_events(
-                      g_request,
-                      NEC_FRAME_TIMEOUT * 1000ULL);  // us -> ns
+        int ret = gpiod_line_request_wait_edge_events(g_request, NEC_FRAME_TIMEOUT * 1000ULL);  // us -> ns
 
         if (ret < 0) {
-            cerr << "[IR] wait_edge_events errore" << endl;
+            cerr << "[IR] wait_edge_events error" << endl;
             break;
         }
 
@@ -55,8 +50,8 @@ static void irqThread()
                 lock_guard<mutex> lock(g_mutex);
                 if (g_receiving && g_buf[g_active].count > 0) {
                     frameToSend = g_buf[g_active];
-                    hasFrame    = true;
-                    g_active    = 1 - g_active;
+                    hasFrame = true;
+                    g_active = 1 - g_active;
                     g_buf[g_active] = IrRawFrame{};
                 }
                 g_receiving = false;
@@ -69,23 +64,21 @@ static void irqThread()
         // Edge arrivato: leggi gli eventi dal buffer
         int n = gpiod_line_request_read_edge_events(g_request, g_eventBuf, 1);
         if (n < 0) {
-            cerr << "[IR] read_edge_events errore" << endl;
+            cerr << "[IR] read_edge_events error" << endl;
             continue;
         }
 
         for (int i = 0; i < n; i++) {
-            gpiod_edge_event* event =
-                gpiod_edge_event_buffer_get_event(g_eventBuf, i);
+            gpiod_edge_event* event = gpiod_edge_event_buffer_get_event(g_eventBuf, i);
 
             // Timestamp dal kernel in nanosecondi -> microsecondi
             uint64_t tickUs = gpiod_edge_event_get_timestamp_ns(event) / 1000ULL;
-            bool level = (gpiod_edge_event_get_event_type(event)
-                          == GPIOD_EDGE_EVENT_RISING_EDGE);
+            bool level = (gpiod_edge_event_get_event_type(event) == GPIOD_EDGE_EVENT_RISING_EDGE);
             
             lock_guard<mutex> lock(g_mutex);
             if (!g_receiving) {
                 if (!level) {
-                    g_lastTick  = tickUs;
+                    g_lastTick = tickUs;
                     g_receiving = true;
                 }
             } else {
@@ -105,10 +98,9 @@ void initIR(IrCallback cb)
 {
     g_callback = cb;
 
-    // Apri /dev/gpiochip4 (RPi 5)
     g_chip = gpiod_chip_open("/dev/gpiochip4");
     if (!g_chip) {
-        cerr << "[IR] Errore apertura /dev/gpiochip4" << endl;
+        cerr << "[IR] Error opening /dev/gpiochip4" << endl;
         return;
     }
 
@@ -145,38 +137,36 @@ void initIR(IrCallback cb)
     g_threadRun = true;
     g_irqThread = thread(irqThread);
 
-    cout << "[IR] Hardware pronto su GPIO " << IR_PIN
-         << " (interrupt-driven, gpiod v2)" << endl;
+    cout << "[IR] Hardware ready on GPIO " << IR_PIN << endl;
 }
 
 void cleanupIR()
 {
     g_threadRun = false;
-    if (g_irqThread.joinable()) g_irqThread.join();
+    if (g_irqThread.joinable()) 
+        g_irqThread.join();
     gpiod_edge_event_buffer_free(g_eventBuf);
     gpiod_line_request_release(g_request);
     gpiod_chip_close(g_chip);
-    cout << "[IR] Hardware rilasciato." << endl;
+    cout << "[IR] Hardware released." << endl;
 }
 
-// =============================================================================
-// SIMULAZIONE
-// =============================================================================
+// Simulation mode - HW independent
 #else
 
-static thread       g_simThread;
+static thread g_simThread;
 static atomic<bool> g_simRun = false;
 
 static IrRawFrame buildNecFrame(uint8_t cmd)
 {
     IrRawFrame frame;
-    uint8_t addr    = 0x00;
+    uint8_t addr = 0x00;
     uint8_t addrInv = static_cast<uint8_t>(~addr);
-    uint8_t cmdInv  = static_cast<uint8_t>(~cmd);
+    uint8_t cmdInv = static_cast<uint8_t>(~cmd);
 
-    uint32_t data = (static_cast<uint32_t>(cmdInv)  << 24) |
-                    (static_cast<uint32_t>(cmd)      << 16) |
-                    (static_cast<uint32_t>(addrInv)  <<  8) |
+    uint32_t data = (static_cast<uint32_t>(cmdInv) << 24) |
+                    (static_cast<uint32_t>(cmd) << 16) |
+                    (static_cast<uint32_t>(addrInv) << 8) |
                     (static_cast<uint32_t>(addr));
 
     int i = 0;
@@ -215,17 +205,17 @@ static void simThread()
 
 void initIR(IrCallback cb)
 {
-    g_callback  = cb;
-    g_simRun    = true;
+    g_callback = cb;
+    g_simRun = true;
     g_simThread = thread(simThread);
-    cout << "[IR] Simulazione attiva. Un tasto ogni 2 secondi." << endl;
+    cout << "[IR] Simulation on. A key every 2 seconds." << endl;
 }
 
 void cleanupIR()
 {
     g_simRun = false;
     if (g_simThread.joinable()) g_simThread.join();
-    cout << "[IR] Simulazione fermata." << endl;
+    cout << "[IR] Simulation stopped." << endl;
 }
 
 #endif

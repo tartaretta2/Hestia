@@ -3,8 +3,8 @@
 
 using namespace std;
 
-// Debounce: ignora lo stesso tasto se arriva entro 300ms
-static uint8_t  s_lastCmd  = 0xFF;
+// Debounce: ignore same key if within 300ms
+static uint8_t s_lastCmd = 0xFF;
 static uint64_t s_lastTimeMs = 0;
 
 static uint64_t nowMs()
@@ -14,11 +14,10 @@ static uint64_t nowMs()
         steady_clock::now().time_since_epoch()).count();
 }
 
-// Controlla se val � entro la tolleranza di target
+// Verify if val is within tolerances
 static bool near(uint32_t val, uint32_t target, uint32_t tolerance = NEC_TOLERANCE)
 {
-    return val >= (target - tolerance) &&
-           val <= (target + tolerance);
+    return val >= (target - tolerance) && val <= (target + tolerance);
 }
 
 NecFrame decodeNEC(const IrRawFrame& raw)
@@ -38,7 +37,7 @@ NecFrame decodeNEC(const IrRawFrame& raw)
     // Leader space: 4.5ms = frame completo, 2.25ms = repeat
     if (near(raw.edges[i].duration_us, NEC_REPEAT_SPACE, NEC_LEADER_TOLERANCE)) {
         out.isRepeat = true;
-        out.valid    = true;
+        out.valid = true;
         return out;
     }
     if (!near(raw.edges[i].duration_us, NEC_LEADER_SPACE, NEC_LEADER_TOLERANCE)) {
@@ -65,30 +64,30 @@ NecFrame decodeNEC(const IrRawFrame& raw)
             data |= (1u << 31);   // bit 1
         else if (!near(space, NEC_ZERO_SPACE))
             return out;           // bit non riconoscibile, frame corrotto
-        // bit 0: gi� 0 dopo lo shift
+        // bit 0: già 0 dopo lo shift
     }
 
     // Estrai i 4 byte
     // Layout: address(8) | ~address(8) | command(8) | ~command(8)
-    uint8_t addr    = (data >>  0) & 0xFF;
-    uint8_t addrInv = (data >>  8) & 0xFF;
-    uint8_t cmd     = (data >> 16) & 0xFF;
-    uint8_t cmdInv  = (data >> 24) & 0xFF;
+    uint8_t addr = (data >> 0) & 0xFF;
+    uint8_t addrInv = (data >> 8) & 0xFF;
+    uint8_t cmd = (data >> 16) & 0xFF;
+    uint8_t cmdInv = (data >> 24) & 0xFF;
 
     // Verifica checksum: byte XOR complemento deve dare 0xFF
     if ((uint8_t)(addr ^ addrInv) != 0xFF) return out;
-    if ((uint8_t)(cmd  ^ cmdInv)  != 0xFF) return out;
+    if ((uint8_t)(cmd ^ cmdInv)  != 0xFF) return out;
 
     // Debounce: stesso tasto entro 300ms -> ignora
     uint64_t now = nowMs();
     if (cmd == s_lastCmd && (now - s_lastTimeMs) < 300) {
         return out;
     }
-    s_lastCmd     = cmd;
-    s_lastTimeMs  = now;
+    s_lastCmd = cmd;
+    s_lastTimeMs = now;
 
     out.address = addr;
     out.command = cmd;
-    out.valid   = true;
+    out.valid = true;
     return out;
 }

@@ -9,8 +9,7 @@ using namespace std;
 
 atomic<bool> running(true);
 
-// Chiamata ogni volta che arriva un frame grezzo dal sensore.
-// Decodifica il frame NEC e gestisce il tasto premuto.
+// Called every time a raw frame get caught by the sensor, it decodes the NEC frame and manage the key pressed
 void onRawFrame(const IrRawFrame& raw)
 {
     NecFrame frame = decodeNEC(raw);
@@ -18,7 +17,7 @@ void onRawFrame(const IrRawFrame& raw)
     if (!frame.valid) return;
 
     if (frame.isRepeat) {
-        cout << "[IR] <REPEAT>" << endl;
+        cout << "[IR] <REPEAT> (Same key as before)" << endl;
         return;
     }
 
@@ -26,24 +25,21 @@ void onRawFrame(const IrRawFrame& raw)
 }
 
 int main()
-{
-    cerr << "Debug: main partito" << endl;
-
-    cout << "=== Smart House IR Remote ===" << endl;
+{    cout << "Smart House IR Remote" << endl;
 #ifdef SIM
-    cout << "Modalita': SIMULAZIONE" << endl;
+    cout << "Simulation mode, hardware independent" << endl;
 #else
-    cout << "Modalita': HARDWARE (GPIO " << IR_PIN << ")" << endl;
+    cout << "On-board mode, code is running on HW on a Raspberry Pi 5. IR sensor on port GPIO " << IR_PIN << "" << endl;
 #endif
-    cout << "Premi Invio per uscire." << endl;
+    cout << "Press enter to escape." << endl;
 
-    initIR(onRawFrame);  // avvia dopo i cout, cos� li vedi sempre
+    initIR(onRawFrame); 
 
     string line;
-    getline(cin, line);  // aspetta Invio, senza consumare nulla prima
+    getline(cin, line);
 
     running = false;
     cleanupIR();
-    cout << "Sistema spento." << endl;
+    cout << "Shut down." << endl;
     return 0;
 }

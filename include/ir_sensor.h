@@ -19,7 +19,7 @@
 #define NEC_FRAME_TIMEOUT  15000 // silenzio che indica fine frame
 #define IR_MAX_EDGES       128   // max edge per frame (67 bastano per NEC)
 
-// PIN GPIO sul Rasp
+// IR sensor GPIO on Raspberry Pi 5
 #ifndef SIM
     #define GPIO_CHIP "/dev/gpiochip4"
     #define IR_PIN 25                

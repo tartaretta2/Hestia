@@ -35,9 +35,9 @@ const Key* lookupKey(uint8_t code)
     return nullptr;
 }
 
-const char* actionName(Action a)
+const char* actionName(Action action)
 {
-    switch (a) {
+    switch (action) {
         case Action::AlarmToggle:   return "AlarmToggle";
         case Action::LightsToggle:  return "LightsToggle";
         case Action::GateToggle:    return "GateToggle";
