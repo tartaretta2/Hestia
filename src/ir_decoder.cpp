@@ -4,8 +4,8 @@
 using namespace std;
 
 // Debounce: ignore same key if within 300ms
-static uint8_t s_lastCmd = 0xFF; // 0xFF non è un codice valido per nessun tasto, così il primo tasto viene sempre accettato
-static uint64_t s_lastTimeMs = 0; // timestamp dall'ultimo tasto accettato
+static uint8_t lastCmd = 0xFF; // 0xFF non è un codice valido per nessun tasto, così il primo tasto viene sempre accettato
+static uint64_t lastTimeMs = 0; // timestamp dall'ultimo tasto accettato
 
 // Ritorna il tempo attuale in millisecondi
 static uint64_t nowMs()
@@ -30,8 +30,8 @@ NecFrame decodeNEC(const IrRawFrame& raw)
     int i = 0;
 
     // Il primo edge di ogni frame NEC è sempre un burst LOW di circa 9000us. 
-    //Se la durata non corrisponde (con tolleranza larga +-1500us) 
-    //il frame è corrotto o siamo partiti nel mezzo, lo scartiamo ritornando il frame vuoto non valido
+    // Se la durata non corrisponde (con tolleranza larga +-1500us) 
+    // il frame è corrotto o siamo partiti nel mezzo, lo scartiamo ritornando il frame vuoto non valido
     if (!near(raw.edges[i].duration_us, NEC_LEADER_BURST, NEC_LEADER_TOLERANCE)) {
         return out;
     }
@@ -87,11 +87,11 @@ NecFrame decodeNEC(const IrRawFrame& raw)
 
     // Debounce: stesso tasto entro 300ms -> ignora
     uint64_t now = nowMs();
-    if (cmd == s_lastCmd && (now - s_lastTimeMs) < 150) {
+    if (cmd == lastCmd && (now - lastTimeMs) < 150) {
         return out;
     }
-    s_lastCmd = cmd;
-    s_lastTimeMs = now;
+    lastCmd = cmd;
+    lastTimeMs = now;
 
     out.address = addr;
     out.command = cmd;

@@ -11,7 +11,7 @@
 
 using namespace std;
 
-static IrCallback g_callback; // funzione che verrà chiamata quando un frame è pronto, impostata da initIR e usata dal thread
+static IrCallback callback; // funzione che verrà chiamata quando un frame è pronto, impostata da initIR e usata dal thread
 static mutex g_mutex; // protegge le variabili condivise tra il thread ISR e il resto del codice
 
 // On-board mode - HW dependent
@@ -55,7 +55,7 @@ static void irqThread()
                 g_receiving = false;
             }
             if (hasFrame)
-                g_callback(frameToSend);
+                callback(frameToSend);
             continue;
         }
 
@@ -73,13 +73,13 @@ static void irqThread()
 
             if (!g_receiving) {
                 // Aggiorna sempre lastTick per misurare il silenzio
-                uint64_t silenzio = tickUs - g_lastTick;
+                uint64_t silence = tickUs - g_lastTick;
                 g_lastTick = tickUs;
 
                 // Inizia a registrare solo su fronte di DISCESA (inizio burst)
                 // e solo dopo un silenzio lungo almeno NEC_FRAME_TIMEOUT:
                 // questo garantisce che siamo all'inizio del frame
-                if (!level && silenzio >= NEC_FRAME_TIMEOUT) {
+                if (!level && silence >= NEC_FRAME_TIMEOUT) {
                     g_receiving = true;
                 }
             } else {
@@ -97,7 +97,7 @@ static void irqThread()
 
 void initIR(IrCallback cb)
 {
-    g_callback = cb;
+    callback = cb;
 
     g_chip = gpiod_chip_open("/dev/gpiochip4");
     if (!g_chip) {
@@ -200,13 +200,13 @@ static void simThread()
         if (!g_simRun) break;
         IrRawFrame frame = buildNecFrame(SIM_KEYS[idx % size(SIM_KEYS)]);
         idx++;
-        g_callback(frame);
+        callback(frame);
     }
 }
 
 void initIR(IrCallback cb)
 {
-    g_callback = cb;
+    callback = cb;
     g_simRun = true;
     g_simThread = thread(simThread);
     cout << "[IR] Simulation on. A key every 2 seconds." << endl;
