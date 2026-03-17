@@ -4,9 +4,10 @@
 using namespace std;
 
 // Debounce: ignore same key if within 300ms
-static uint8_t s_lastCmd = 0xFF;
-static uint64_t s_lastTimeMs = 0;
+static uint8_t s_lastCmd = 0xFF; // 0xFF non è un codice valido per nessun tasto, così il primo tasto viene sempre accettato
+static uint64_t s_lastTimeMs = 0; // timestamp dall'ultimo tasto accettato
 
+// Ritorna il tempo attuale in millisecondi
 static uint64_t nowMs()
 {
     using namespace chrono;
@@ -14,7 +15,7 @@ static uint64_t nowMs()
         steady_clock::now().time_since_epoch()).count();
 }
 
-// Verify if val is within tolerances
+// Verify if val is within interval tolerances
 static bool near(uint32_t val, uint32_t target, uint32_t tolerance = NEC_TOLERANCE)
 {
     return val >= (target - tolerance) && val <= (target + tolerance);
@@ -22,34 +23,40 @@ static bool near(uint32_t val, uint32_t target, uint32_t tolerance = NEC_TOLERAN
 
 NecFrame decodeNEC(const IrRawFrame& raw)
 {
-    NecFrame out{0, 0, false, false};
+    NecFrame out{0, 0, false, false}; // Frame non valido ritornato in caso di errore
 
     if (raw.count < 2) return out;
 
     int i = 0;
 
-    // Verifica leader burst (~9ms) con tolleranza larga
+    // Il primo edge di ogni frame NEC è sempre un burst LOW di circa 9000us. 
+    //Se la durata non corrisponde (con tolleranza larga +-1500us) 
+    //il frame è corrotto o siamo partiti nel mezzo, lo scartiamo ritornando il frame vuoto non valido
     if (!near(raw.edges[i].duration_us, NEC_LEADER_BURST, NEC_LEADER_TOLERANCE)) {
         return out;
     }
     i++;
 
-    // Leader space: 4.5ms = frame completo, 2.25ms = repeat
+    // Dopo il leader burst c'è sempre un silenzio HIGH. La sua durata determina il tipo di frame.
+    // CASO 1: circa 2250us -> frame repeat
     if (near(raw.edges[i].duration_us, NEC_REPEAT_SPACE, NEC_LEADER_TOLERANCE)) {
         out.isRepeat = true;
         out.valid = true;
         return out;
     }
+    // CASO 2: frame corrotto
     if (!near(raw.edges[i].duration_us, NEC_LEADER_SPACE, NEC_LEADER_TOLERANCE)) {
         return out;
     }
     i++;
 
-    // Leggi 32 bit, LSB first
+    // CASO 3: circa 4500us -> frame dati da decodificare
+    // Leggi 32 bit, LSB
     // Ogni bit = burst fisso (~562us) + spazio variabile
     //   spazio ~562us  -> bit 0
     //   spazio ~1687us -> bit 1
     uint32_t data = 0;
+    // cuore del decoder
     for (int bit = 0; bit < 32; bit++) {
         if (i + 1 >= raw.count) return out;
 
@@ -74,7 +81,7 @@ NecFrame decodeNEC(const IrRawFrame& raw)
     uint8_t cmd = (data >> 16) & 0xFF;
     uint8_t cmdInv = (data >> 24) & 0xFF;
 
-    // Verifica checksum: byte XOR complemento deve dare 0xFF
+    // Verifica checksum: byte XOR complemento deve dare 0xFF, NEC trasmette ogni byte due volte in forma complementata
     if ((uint8_t)(addr ^ addrInv) != 0xFF) return out;
     if ((uint8_t)(cmd ^ cmdInv)  != 0xFF) return out;
 

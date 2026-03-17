@@ -11,31 +11,29 @@
 
 using namespace std;
 
-static IrCallback g_callback;
-static mutex g_mutex;
+static IrCallback g_callback; // funzione che verrà chiamata quando un frame è pronto, impostata da initIR e usata dal thread
+static mutex g_mutex; // protegge le variabili condivise tra il thread ISR e il resto del codice
 
 // On-board mode - HW dependent
 #ifndef SIM
 
-static gpiod_chip* g_chip = nullptr;
-static gpiod_line_request* g_request = nullptr;
-static gpiod_edge_event_buffer* g_eventBuf = nullptr;
-static thread g_irqThread;
+static gpiod_chip* g_chip = nullptr; // handle del chip GPIO
+static gpiod_line_request* g_request = nullptr; // contiene il file descriptor su cui il kernel notifica gli interrupt
+static gpiod_edge_event_buffer* g_eventBuf = nullptr; // buffer usato da gpiod per scrivere gli eventi letti
+static thread g_irqThread; // thread che aspetta gli interrupt
 static atomic<bool> g_threadRun = false;
-static uint64_t g_lastTick = 0;
-static bool g_receiving = false;
-static IrRawFrame g_buf[2];
-static int g_active = 0;
+static uint64_t g_lastTick = 0; // timestamp dell'ultimo edge in microsecondi, usato per calcolare le durate
+static bool g_receiving = false; // true se siamo dentro un frame in corso di ricezione
+static IrRawFrame g_buf[2]; // double buffer, mentre il thread ISR riempie uno, il decoder legge dall'altro
+static int g_active = 0; // indice del buffer attualmente in scrittura
 
 // Thread interrupt-driven: gpiod_line_request_wait_edge_events blocca
 // il thread finchè il kernel non riceve un interrupt hardware dal GPIO.
-// Non consuma CPU mentre aspetta.
 static void irqThread()
 {
     while (g_threadRun) {
 
-        int ret = gpiod_line_request_wait_edge_events(
-                      g_request, NEC_FRAME_TIMEOUT * 1000ULL);
+        int ret = gpiod_line_request_wait_edge_events(g_request, NEC_FRAME_TIMEOUT * 1000ULL); // vuole nanosecondi
 
         if (ret < 0) {
             cerr << "[IR] wait_edge_events errore" << endl;
@@ -50,8 +48,8 @@ static void irqThread()
                 lock_guard<mutex> lock(g_mutex);
                 if (g_receiving && g_buf[g_active].count > 0) {
                     frameToSend = g_buf[g_active];
-                    hasFrame    = true;
-                    g_active    = 1 - g_active;
+                    hasFrame = true;
+                    g_active = 1 - g_active;
                     g_buf[g_active] = IrRawFrame{};
                 }
                 g_receiving = false;
@@ -66,12 +64,10 @@ static void irqThread()
         if (n < 0) continue;
 
         for (int i = 0; i < n; i++) {
-            gpiod_edge_event* event =
-                gpiod_edge_event_buffer_get_event(g_eventBuf, i);
+            gpiod_edge_event* event = gpiod_edge_event_buffer_get_event(g_eventBuf, i);
 
             uint64_t tickUs = gpiod_edge_event_get_timestamp_ns(event) / 1000ULL;
-            bool level = (gpiod_edge_event_get_event_type(event)
-                          == GPIOD_EDGE_EVENT_RISING_EDGE);
+            bool level = (gpiod_edge_event_get_event_type(event) == GPIOD_EDGE_EVENT_RISING_EDGE);
 
             lock_guard<mutex> lock(g_mutex);
 
@@ -90,11 +86,10 @@ static void irqThread()
                 // Siamo dentro un frame: registra durata e livello
                 IrRawFrame& frame = g_buf[g_active];
                 if (frame.count < IR_MAX_EDGES) {
-                    frame.edges[frame.count] = IrEdge(
-                        static_cast<uint32_t>(tickUs - g_lastTick), level);
+                    frame.edges[frame.count] = IrEdge(static_cast<uint32_t>(tickUs - g_lastTick), level);
                     frame.count++;
                 }
-                g_lastTick = tickUs;
+                g_lastTick = tickUs; // aggiorna timestamp per prossimo edge
             }
         }
     }
@@ -110,7 +105,7 @@ void initIR(IrCallback cb)
         return;
     }
 
-    // Crea la configurazione della linea
+    // Crea la configurazione della linea e del pin
     gpiod_line_settings* settings = gpiod_line_settings_new();
     gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_INPUT);
     gpiod_line_settings_set_bias(settings, GPIOD_LINE_BIAS_PULL_UP);

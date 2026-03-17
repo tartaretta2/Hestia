@@ -6,7 +6,7 @@
 #include <array>
 
 // Timing protocollo NEC (microsecondi)
-// Il telecomando Elegoo usa NEC: ogni bit � codificato dalla durata del silenzio dopo il burst. Burst fisso ~562us.
+// Il telecomando Elegoo usa NEC: ogni bit è codificato dalla durata del silenzio dopo il burst. Burst fisso ~562us.
 // Silenzio corto (~562us) = bit 0, silenzio lungo (~1687us) = bit 1
 #define NEC_LEADER_BURST   9000
 #define NEC_LEADER_SPACE   4500
@@ -25,27 +25,27 @@
     #define IR_PIN 25                
 #endif
 
-// ?? Un singolo edge (cambio di livello del segnale GPIO) ??????????????
+// Un singolo edge (cambio di livello del segnale GPIO)
 struct IrEdge {
-    uint32_t duration_us;  // quanto � durato il livello precedente
+    uint32_t duration_us;  // quanto è durato il livello precedente
     bool level;        // nuovo livello dopo questo edge
     IrEdge() : duration_us(0), level(false) {}
     IrEdge(uint32_t d, bool l) : duration_us(d), level(l) {}
 };
 
-// ?? Frame grezzo: sequenza di edge catturati dalla ISR ????????????????
+// Frame grezzo: sequenza di edge catturati dalla ISR
 struct IrRawFrame {
     std::array<IrEdge, IR_MAX_EDGES> edges;
     int count = 0;
 };
 
-// ?? Funzione da chiamare quando arriva un frame completo ??????????????
+// Funzione da chiamare quando arriva un frame completo
 using IrCallback = std::function<void(const IrRawFrame&)>;
 
-// ?? Avvia il sensore (HW reale o simulazione) e registra il callback ?
+// Avvia il sensore (HW reale o simulazione) e registra il callback
 void initIR(IrCallback cb);
 
-// ?? Ferma il sensore ??????????????????????????????????????????????????
+// Ferma il sensore
 void cleanupIR();
 
-#endif // IR_SENSOR_H
+#endif
