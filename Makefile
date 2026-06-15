@@ -1,15 +1,17 @@
 CC = g++
 CFLAGS = -Wall -I./include
+
+LIBS = -lgpiod -llgpio -lpthread
 SRC = src/*.cpp
-TARGET = build/remote_ir
+TARGET = build/ir_ms_alarm
 
 sim:
 	mkdir -p build
-	$(CC) $(CFLAGS) -DSIM $(SRC) -lpthread -o $(TARGET)
+	$(CC) $(CFLAGS) -DSIM $(SRC) -o $(TARGET)
 
 release:
 	mkdir -p build
-	$(CC) $(CFLAGS) $(SRC) -lpthread -lgpiod -o $(TARGET)
+	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LIBS)
 
 clean:
 	rm -rf build

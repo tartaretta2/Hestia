@@ -1,3 +1,6 @@
+#include "motion_sensor.h"
+#include "led.h"
+#include "buzzer.h"
 #include "ir_sensor.h"
 #include "ir_decoder.h"
 #include "ir_remote.h"
@@ -5,11 +8,63 @@
 #include <thread>
 #include <atomic>
 
+#ifndef SIM
+    #define GPIO_CHIP "/dev/gpiochip4"
+    #define MS_PIN 17
+    #define BUZZER_PIN 27
+    #define LED_PIN 22
+#endif
+
 using namespace std;
 
 atomic<bool> running(true);
+atomic<bool> alarmOn(false);
+atomic<bool> sirenOn(false);
 
-// Called every time a raw frame get caught by the sensor, it decodes the NEC frame and manage the key pressed
+int readSensor()
+{
+    #ifdef SIM
+      return simulateMS();
+    #else
+        return readMS();
+    #endif
+}
+
+void alarm()
+{
+    int i;
+    while (sirenOn)
+    {
+        #ifndef SIM
+            toggleLED(LED_PIN);
+            toggleBuzzer(BUZZER_PIN);
+            this_thread::sleep_for(chrono::milliseconds(500));
+        #else
+            simulateLED();
+            simulateBuzzer();
+        #endif
+    }
+}
+
+void MSListener()
+{
+
+    cout << "Motion Sensor Listener started." << endl;
+    while (alarmOn)
+    {
+        if (readSensor())
+        {
+            cout << "Motion detected!" << endl;
+            sirenOn = true;
+            thread siren(alarm);
+            cout << "Alarm triggered. Press enter to stop." << endl;
+            cin.get();
+            sirenOn = false;
+            siren.join();
+        }
+    }
+}
+
 void onRawFrame(const IrRawFrame& raw)
 {
     NecFrame frame = decodeNEC(raw);
@@ -25,21 +80,33 @@ void onRawFrame(const IrRawFrame& raw)
 }
 
 int main()
-{    cout << "Smart House IR Remote" << endl;
-#ifdef SIM
-    cout << "Simulation mode, hardware independent" << endl;
-#else
-    cout << "On-board mode, code is running on HW on a Raspberry Pi 5. IR sensor on port GPIO " << IR_PIN << "" << endl;
-#endif
-    cout << "Press enter to escape." << endl;
-
+{
+#ifndef SIM
+    initBuzzer(GPIO_CHIP, BUZZER_PIN);
+    initLED(GPIO_CHIP, LED_PIN);
+    initMS(GPIO_CHIP, MS_PIN);
     initIR(onRawFrame); 
+#endif
 
-    string line;
-    getline(cin, line);
+    while (running)
+    {
+        cout << "Press Enter to turn on the alarm system." << endl;
+        cin.get();
+        alarmOn = true;
+        thread listener(MSListener);
+        cout << "Alarm activated. Press Enter to stop." << endl;
+        cin.get();
+        alarmOn = false;
+        listener.join();
+    }
 
-    running = false;
+#ifndef SIM
+    cleanupBuzzer(BUZZER_PIN);
+    cleanupLED();
     cleanupIR();
-    cout << "Shut down." << endl;
+#endif
+
+    cout << "System shut down." << endl;
+
     return 0;
 }
