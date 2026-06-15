@@ -1,4 +1,5 @@
 #include "buzzer.h"
+#include "houseControl.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -12,33 +13,33 @@ using namespace std;
 #ifndef SIM
 static int handle = -1;
 
-void initBuzzer(const char* GPIO_CHIP, const unsigned int BUZZER_PIN){
+void initBuzzer(const char* gpioChip, const unsigned int buzzerPin){
     handle = lgGpiochipOpen(4);
-    cout << "Initializing BUZZER on pin: " << BUZZER_PIN << endl;
+    cout << "Initializing BUZZER on pin: " << buzzerPin << endl;
     if (handle < 0) {
         std::cerr << "Failed to open GPIO chip" << std::endl;
         return;
     }
-    lgGpioClaimOutput(handle, 0, BUZZER_PIN, 0);
+    lgGpioClaimOutput(handle, 0, buzzerPin, 0);
 }
 
-void toggleBuzzer(const unsigned int BUZZER_PIN){
+void toggleBuzzer(const unsigned int buzzerPin){
     int freq;
     for(freq = 800; freq <= 1200; freq += 10){
-        lgTxPwm(handle, BUZZER_PIN, freq, 50, 0, 0);
+        lgTxPwm(handle, buzzerPin, freq, 50, 0, 0);
         this_thread::sleep_for(chrono::milliseconds(20));
     }
         
     for(freq = 1200; freq >= 800; freq -= 10){
-        lgTxPwm(handle, BUZZER_PIN, freq, 50, 0, 0);
+        lgTxPwm(handle, buzzerPin, freq, 50, 0, 0);
         this_thread::sleep_for(chrono::milliseconds(20));
     }
 
-    lgTxPwm(handle, BUZZER_PIN, 0, 0, 0, 0);
+    lgTxPwm(handle, buzzerPin, 0, 0, 0, 0);
 }
 
-void cleanupBuzzer(const unsigned int BUZZER_PIN){
-    lgGpioWrite(handle, BUZZER_PIN, 0);
+void cleanupBuzzer(const unsigned int buzzerPin){
+    lgGpioWrite(handle, buzzerPin, 0);
     lgGpiochipClose(handle);
 }
 

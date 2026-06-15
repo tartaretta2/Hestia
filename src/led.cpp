@@ -1,4 +1,5 @@
 #include "led.h"
+#include "houseControl.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -13,10 +14,10 @@ using namespace std;
 static gpiod_chip *chip = nullptr;
 static gpiod_line_request *request = nullptr;
 
-void initLED(const char *GPIO_CHIP, const unsigned int LED_PIN)
+void initLED(const char *gpioChip, const unsigned int ledPin)
 {
-    cout << "Initializing LED on GPIO chip: " << GPIO_CHIP << ", pin: " << LED_PIN << endl;
-    chip = gpiod_chip_open(GPIO_CHIP);
+    cout << "Initializing LED on GPIO chip: " << gpioChip << ", pin: " << ledPin << endl;
+    chip = gpiod_chip_open(gpioChip);
     if (!chip)
     {
         cerr << gpiod_chip_get_info(chip) << endl
@@ -30,7 +31,7 @@ void initLED(const char *GPIO_CHIP, const unsigned int LED_PIN)
     gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_INACTIVE);
 
     gpiod_line_config *lineConf = gpiod_line_config_new();
-    gpiod_line_config_add_line_settings(lineConf, &LED_PIN, 1, settings);
+    gpiod_line_config_add_line_settings(lineConf, &ledPin, 1, settings);
 
     gpiod_request_config *requestConf = gpiod_request_config_new();
     gpiod_request_config_set_consumer(requestConf, "led");
@@ -44,14 +45,14 @@ void initLED(const char *GPIO_CHIP, const unsigned int LED_PIN)
     gpiod_request_config_free(requestConf);
 }
 
-void toggleLED(const unsigned int LED_PIN){
+void toggleLED(const unsigned int ledPin){
     if (!request) return;
 
     int i;
     for(i = 0; i < 5; ++i){
-        gpiod_line_request_set_value(request, LED_PIN, GPIOD_LINE_VALUE_ACTIVE);
+        gpiod_line_request_set_value(request, ledPin, GPIOD_LINE_VALUE_ACTIVE);
         this_thread::sleep_for(chrono::milliseconds(70));
-        gpiod_line_request_set_value(request, LED_PIN, GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(request, ledPin, GPIOD_LINE_VALUE_INACTIVE);
         this_thread::sleep_for(chrono::milliseconds(30));
     }
 }

@@ -1,4 +1,5 @@
 #include "ir_sensor.h"
+#include "houseControl.h"
 #include <iostream>
 #include <thread>
 #include <mutex>
@@ -21,7 +22,7 @@ static gpiod_chip* g_chip = nullptr; // handle del chip GPIO
 static gpiod_line_request* g_request = nullptr; // contiene il file descriptor su cui il kernel notifica gli interrupt
 static gpiod_edge_event_buffer* g_eventBuf = nullptr; // buffer usato da gpiod per scrivere gli eventi letti
 static thread g_irqThread; // thread che aspetta gli interrupt
-static atomic<bool> g_threadRun = false;
+static atomic_bool g_threadRun = false;
 static uint64_t g_lastTick = 0; // timestamp dell'ultimo edge in microsecondi, usato per calcolare le durate
 static bool g_receiving = false; // true se siamo dentro un frame in corso di ricezione
 static IrRawFrame g_buf[2]; // double buffer, mentre il thread ISR riempie uno, il decoder legge dall'altro
@@ -99,9 +100,9 @@ void initIR(IrCallback cb)
 {
     callback = cb;
 
-    g_chip = gpiod_chip_open("/dev/gpiochip4");
+    g_chip = gpiod_chip_open(GPIO_CHIP);
     if (!g_chip) {
-        cerr << "[IR] Error opening /dev/gpiochip4" << endl;
+        cerr << "[IR] Error opening " << GPIO_CHIP << endl;
         return;
     }
 
@@ -156,7 +157,7 @@ void cleanupIR()
 #else
 
 static thread g_simThread;
-static atomic<bool> g_simRun = false;
+static atomic_bool g_simRun = false;
 
 static IrRawFrame buildNecFrame(uint8_t cmd)
 {
@@ -198,7 +199,7 @@ static void simThread()
     while (g_simRun) {
         this_thread::sleep_for(chrono::seconds(2));
         if (!g_simRun) break;
-        IrRawFrame frame = buildNecFrame(SIM_KEYS[idx % size(SIM_KEYS)]);
+        IrRawFrame frame = buildNecFrame(SIM_KEYS[idx % sizeof(SIM_KEYS)]);
         idx++;
         callback(frame);
     }

@@ -1,4 +1,5 @@
 #include "buzzer.h"
+#include "houseControl.h"
 #include <iostream>
 #include <thread>
 #include <chrono>

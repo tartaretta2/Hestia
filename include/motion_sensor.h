@@ -1,9 +1,9 @@
 #pragma once
 
 #ifndef SIM
-void initLED(const char* gpioChip, const unsigned int ledPin);
-void toggleLED(const unsigned int ledPin);
-void cleanupLED();
+    void initMS(const char* gpioChip, const unsigned int msPin);
+    int readMS();
+    void cleanupMS();
 #endif
 
-void simulateLED();
+int simulateMS();

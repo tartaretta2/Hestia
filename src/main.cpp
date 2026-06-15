@@ -4,67 +4,21 @@
 #include "ir_sensor.h"
 #include "ir_decoder.h"
 #include "ir_remote.h"
+#include "houseControl.h"
 #include <iostream>
 #include <thread>
 #include <atomic>
 
-#ifndef SIM
-    #define GPIO_CHIP "/dev/gpiochip4"
-    #define MS_PIN 17
-    #define BUZZER_PIN 27
-    #define LED_PIN 22
-#endif
-
 using namespace std;
 
-atomic<bool> running(true);
-atomic<bool> alarmOn(false);
-atomic<bool> sirenOn(false);
+// Global state flags shared across threads
+// (atomic ensures safe concurrent access)
+atomic<bool> sirenOn(false);   // true when the buzzer/LED should be active
+atomic<bool> alarmOn(false);   // true when the alarm system is armed
+atomic<bool> running(true);    // main loop continues while true
 
-int readSensor()
-{
-    #ifdef SIM
-      return simulateMS();
-    #else
-        return readMS();
-    #endif
-}
-
-void alarm()
-{
-    int i;
-    while (sirenOn)
-    {
-        #ifndef SIM
-            toggleLED(LED_PIN);
-            toggleBuzzer(BUZZER_PIN);
-            this_thread::sleep_for(chrono::milliseconds(500));
-        #else
-            simulateLED();
-            simulateBuzzer();
-        #endif
-    }
-}
-
-void MSListener()
-{
-
-    cout << "Motion Sensor Listener started." << endl;
-    while (alarmOn)
-    {
-        if (readSensor())
-        {
-            cout << "Motion detected!" << endl;
-            sirenOn = true;
-            thread siren(alarm);
-            cout << "Alarm triggered. Press enter to stop." << endl;
-            cin.get();
-            sirenOn = false;
-            siren.join();
-        }
-    }
-}
-
+// Called by the IR receiver when a complete NEC frame is captured.
+// It decodes the frame and dispatches the resulting command.
 void onRawFrame(const IrRawFrame& raw)
 {
     NecFrame frame = decodeNEC(raw);
@@ -79,34 +33,41 @@ void onRawFrame(const IrRawFrame& raw)
     handleKey(frame.command);
 }
 
-int main()
-{
+int main() {
 #ifndef SIM
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
     initLED(GPIO_CHIP, LED_PIN);
     initMS(GPIO_CHIP, MS_PIN);
-    initIR(onRawFrame); 
+    initIR(onRawFrame);
 #endif
 
-    while (running)
-    {
-        cout << "Press Enter to turn on the alarm system." << endl;
-        cin.get();
-        alarmOn = true;
-        thread listener(MSListener);
-        cout << "Alarm activated. Press Enter to stop." << endl;
-        cin.get();
-        alarmOn = false;
-        listener.join();
+    cout << "Press remote POWER button to turn on the alarm system." << endl;
+
+    while (running) {
+        if (sirenOn) {
+            #ifdef SIM
+                simulateLED();
+                simulateBuzzer();
+            #else
+                toggleLED(LED_PIN);
+                toggleBuzzer(BUZZER_PIN);
+            #endif
+        } else {
+            // Avoid busy waiting when siren is off
+            this_thread::sleep_for(chrono::milliseconds(100));
+        }
     }
 
+    // Ensure system is fully stopped before exiting
+    // (stops siren/alarm threads and releases GPIO resources)
+    shutdownSystem();
+
 #ifndef SIM
+    cleanupIR();
     cleanupBuzzer(BUZZER_PIN);
     cleanupLED();
-    cleanupIR();
+    cleanupMS();
 #endif
-
     cout << "System shut down." << endl;
-
     return 0;
 }
