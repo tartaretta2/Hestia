@@ -33,8 +33,10 @@ enum class Action {
     LightsToggle,    // 1     -> lights on/off
     GateToggle,      // 2     -> gate open/close
     HeatingToggle,   // 3     -> heating on/off
-    LightsUp,        // VOL+  -> aumenta luminosità
-    LightsDown,      // VOL-  -> diminuisci luminosità
+    LightsUp,        // VOL+  -> increase brightness
+    LightsDown,      // VOL-  -> decrease brightness
+    SirenToggle,     // PLAY/PAUSE -> siren on/off
+    ShutdownSystem,   // FUNC/STOP -> shutdown system
     Unknown
 };
 
@@ -48,7 +50,7 @@ struct Key {
 // Search fot a key in among the codes, if none is found, nullptr is returned
 const Key* lookupKey(uint8_t code);
 
-// Return the name of the action name
+// Return the name of the action
 const char* actionName(Action a);
 
 // Handle the action and print the infos about a key
