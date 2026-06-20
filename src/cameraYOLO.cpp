@@ -199,3 +199,13 @@ void cameraLoop(){
     return;
 }
 
+
+void initCameraSystem() {
+    cameraThread = thread(cameraLoop);
+}
+
+void stopCameraSystem() {
+    if (cameraThread.joinable()) {
+        cameraThread.join();
+    }
+}
