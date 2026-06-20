@@ -9,7 +9,6 @@ CAMERA_LIBS = $(shell pkg-config --libs opencv4) \
               -lopenvino
 CAMERA_CFLAGS = $(shell pkg-config --cflags opencv4)
 
-# Sorgenti comuni: tutti tranne la camera
 SRC = $(filter-out src/cameraYOLO.cpp, $(wildcard src/*.cpp))
 CAMERA_SRC = src/cameraYOLO.cpp
 
