@@ -4,6 +4,7 @@
 #include "ir_sensor.h"
 #include "ir_decoder.h"
 #include "ir_remote.h"
+#include "gate.h"
 #include "houseControl.h"
 #include <iostream>
 #include <thread>
@@ -38,6 +39,7 @@ int main() {
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
     initLED(GPIO_CHIP, LED_PIN);
     initMS(GPIO_CHIP, MS_PIN);
+    initGate(GPIO_CHIP, GATE_PIN);
     initIR(onRawFrame);
 #endif
 
@@ -67,6 +69,7 @@ int main() {
     cleanupBuzzer(BUZZER_PIN);
     cleanupLED();
     cleanupMS();
+    cleanupGate(GATE_PIN);
 #endif
     cout << "System shut down." << endl;
     return 0;

@@ -72,17 +72,15 @@ void toggleGate(const unsigned int gatePin)
 {
     if (!gateOpen)
     {
-        cout << "GATE: opening..." << endl;
+        cout << "Gate: opening..." << endl;
         sweepServo(gatePin, PULSE_CLOSED, PULSE_OPEN);
         gateOpen = true;
-        cout << "GATE: open" << endl;
     }
     else
     {
-        cout << "GATE: closing..." << endl;
+        cout << "Gate: closing..." << endl;
         sweepServo(gatePin, PULSE_OPEN, PULSE_CLOSED);
         gateOpen = false;
-        cout << "GATE: closed" << endl;
     }
 }
 
@@ -99,11 +97,11 @@ void simulateGate()
     static bool open = false;
     if (!open)
     {
-        cout << "GATE OPEN (simulated, 180 degrees)" << endl;
+        cout << "Gate opened (simulated)" << endl;
     }
     else
     {
-        cout << "GATE CLOSED (simulated, 180 degrees)" << endl;
+        cout << "Gate closed (simulated)" << endl;
     }
     open = !open;
 }

@@ -3,6 +3,7 @@
 #include "led.h"
 #include "buzzer.h"
 #include "ir_remote.h"
+#include "gate.h"
 #include <iostream>
 #include <thread>
 #include <atomic>
@@ -77,6 +78,14 @@ void MSListener() {
 
 
    cout << "Motion Sensor Listener stopped." << endl;
+}
+
+void toggleGateActivation() {
+    #ifdef SIM
+        simulateGate();
+    #else
+        toggleGate(GATE_PIN);
+    #endif
 }
 
 
