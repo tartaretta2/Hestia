@@ -73,4 +73,118 @@ string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
     return cleanedText;
 }
 
+void cameraLoop(){
+    cout<<"Initializing Camera System" <<endl;
+
+    ov::Core core;
+
+    auto model = core.read_model("../best_openvino_model/best.xml");
+    auto compiled_model = core.compile_model(model, "CPU");
+    auto infer_request = compiled_model.create_infer_request();
+
+    auto input_port = compiled_model.input();
+    
+    tesseract::TessBaseAPI *api = new tesseract::TessBaseAPI();
+    api->SetVariable("tessedit_char_whitelist", "0123456789ABCDEFGHJKLMNPRSTVWXYZ");
+    api->SetPageSegMode(PSM_SINGLE_LINE);
+
+    if (api->Init(NULL, "eng")) { 
+        fprintf(stderr, "Could not initialize tesseract.\n");
+        exit(1);
+    }
+
+    VideoCapture cap(0);
+    if (!cap.isOpened()) return;
+
+    auto output = infer_request.get_output_tensor(0);
+    auto shape = output.get_shape();
+    cout << "DEBUG YOLO26 - Output Shape: ";
+    for (auto s : shape) cout << s << " ";
+    cout << endl;
+
+    Mat frame;
+    namedWindow("Licence Plate Detector C++", WINDOW_NORMAL);
+
+    while (alarmOn) {
+        cap >> frame;
+        if (frame.empty()) break;
+
+        Mat blob;
+        blob = dnn::blobFromImage(frame, 1.0 / 255.0, Size(640, 640), Scalar(), true, false);
+
+        ov::Tensor input_tensor(ov::element::f32, {1, 3, 640, 640}, blob.data);
+        infer_request.set_input_tensor(input_tensor);
+
+        infer_request.infer();
+
+        auto output = infer_request.get_output_tensor(0);
+        float* output_data = output.data<float>();
+
+        Mat detectionMat(300, 6, CV_32F, output_data);
+        
+
+        vector<float> confidences;
+        vector<Rect> boxes;
+
+        float x_factor = frame.cols / INPUT_WIDTH;
+        float y_factor = frame.rows / INPUT_HEIGHT;
+
+        
+        for (int i = 0; i < detectionMat.rows; i++) {
+            
+            float confidence = detectionMat.at<float>(i, 4); 
+
+            if (confidence >= SCORE_THRESHOLD) {
+
+
+                float x1 = detectionMat.at<float>(i, 0);
+                float y1 = detectionMat.at<float>(i, 1);
+                float x2 = detectionMat.at<float>(i, 2);
+                float y2 = detectionMat.at<float>(i, 3);
+
+                int left = int(x1 * x_factor);
+                int top = int(y1 * y_factor);
+                int width = int((x2 - x1) * x_factor);
+                int height = int((y2 - y1) * y_factor);
+
+                cout << "YOLO26 ha trovato una targa! Conf: " << confidence 
+                << " Box: [" << left << "," << top << "," << width << "," << height << "]" << endl;
+
+                boxes.push_back(Rect(left, top, width, height));
+                confidences.push_back(confidence);
+            }
+        }
+
+        vector<int> indices;
+        NMSBoxes(boxes, confidences, SCORE_THRESHOLD, NMS_THRESHOLD, indices);
+        
+        for (int idx : indices) {
+
+            Rect& fineBox = boxes[idx];
+            
+            string plateText = getLicencePlate(frame, fineBox, api);
+            
+            rectangle(frame, boxes[idx], Scalar(0, 255, 0), 3);
+            
+            if(plateText == ""){
+                cout <<"No text detected"<<endl;
+            }
+            else{
+                cout <<"Licence plate detected: " <<plateText <<endl;
+                checkPlate(plateText);
+                putText(frame, plateText, Point(fineBox.x, fineBox.y - 35), FONT_HERSHEY_SIMPLEX, 0.9, Scalar(255, 255, 255), 2);
+            }
+            
+            string label = "TARGA: " + to_string(confidences[idx]).substr(0, 4);
+            putText(frame, label, Point(boxes[idx].x, boxes[idx].y - 10), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 1);
+        }
+
+
+        imshow("Licence Plate Detector C++", frame);
+        if (waitKey(1) == 'q') break;
+    }
+
+    api->End();
+    return;
+}
 
