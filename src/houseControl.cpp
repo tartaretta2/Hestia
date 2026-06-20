@@ -110,7 +110,11 @@ void checkPlate(const string& plate) {
     for (const auto& p : authorizedPlates) {
         if (plate == p) {
             cout << "Targa autorizzata riconosciuta: " << plate << endl;
-            if (alarmOn) toggleAlarmActivation();  // stacca l'allarme
+            if (alarmOn) {
+                alarmOn = false;
+                sirenOn = false;
+                cout << "Alarm OFF (targa riconosciuta)" << endl;
+            }
             return;
         }
     }
