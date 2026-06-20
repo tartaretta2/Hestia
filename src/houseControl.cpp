@@ -4,6 +4,7 @@
 #include "buzzer.h"
 #include "ir_remote.h"
 #include "gate.h"
+#include "cameraYOLO.h"
 #include <iostream>
 #include <thread>
 #include <atomic>
@@ -28,22 +29,21 @@ static thread sirenThread;  // reserved for future use (e.g., separate siren tas
 
 
 void toggleAlarmActivation() {
-   if (!alarmOn) {
-       // Arm the alarm system: motion sensor starts monitoring
-       alarmOn = true;
-       cout << "Alarm ON" << endl;
-       motionThread = thread(MSListener);
+    if (!alarmOn) {
+        // Arm the alarm system: motion sensor starts monitoring and initialize the camera
+        alarmOn = true;
+        cout << "Alarm ON" << endl;
+        motionThread = thread(MSListener);
+        initCameraSystem();
 
-
-   } else {
-       // Disarm the alarm system: stop siren and stop motion monitoring
-       alarmOn = false;
-       sirenOn = false;
-       cout << "Alarm OFF" << endl;
-
-
-       if (motionThread.joinable()) motionThread.join();
-   }
+    } else {
+        // Disarm the alarm system: stop siren, stop motion monitoring and camera
+        alarmOn = false;
+        sirenOn = false;
+        cout << "Alarm OFF" << endl;
+        if (motionThread.joinable()) motionThread.join();
+        stopCameraSystem();
+    }
 }
 
 
