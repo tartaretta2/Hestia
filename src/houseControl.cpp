@@ -8,6 +8,7 @@
 #include <iostream>
 #include <thread>
 #include <atomic>
+#include <string>
 using namespace std;
 
 

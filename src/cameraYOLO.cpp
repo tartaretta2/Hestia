@@ -89,7 +89,7 @@ void cameraLoop(){
 
     ov::Core core;
 
-    auto model = core.read_model("../best_openvino_model/best.xml");
+    auto model = core.read_model("../models/best.xml");
     auto compiled_model = core.compile_model(model, "CPU");
     auto infer_request = compiled_model.create_infer_request();
 
