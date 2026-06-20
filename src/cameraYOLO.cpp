@@ -1,3 +1,14 @@
+#include "cameraYOLO.h"
+#include "houseControl.h"
+#include <openvino/openvino.hpp>
+#include <opencv2/opencv.hpp>
+#include <tesseract/baseapi.h>
+#include <vector>
+#include <thread>
+#include <string>
+#include <iostream>
+
+
 static thread cameraThread;
 extern atomic<bool> alarmOn;
 
