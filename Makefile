@@ -1,8 +1,18 @@
 CC = g++
-CFLAGS = -Wall -I./include
+CFLAGS = -Wall -std=c++17 -I./include
 
 LIBS = -lgpiod -llgpio -lpthread
-SRC = src/*.cpp
+
+#libraries for camera (OpenVINO, OpenCV, Tesseract)
+CAMERA_LIBS = $(shell pkg-config --libs opencv4) \
+              -ltesseract -lleptonica \
+              -lopenvino
+CAMERA_CFLAGS = $(shell pkg-config --cflags opencv4)
+
+# Sorgenti comuni: tutti tranne la camera
+SRC = $(filter-out src/cameraYOLO.cpp, $(wildcard src/*.cpp))
+CAMERA_SRC = src/cameraYOLO.cpp
+
 TARGET = build/ir_ms_alarm
 
 sim:
@@ -11,7 +21,7 @@ sim:
 
 release:
 	mkdir -p build
-	$(CC) $(CFLAGS) $(SRC) -o $(TARGET) $(LIBS)
+	$(CC) $(CFLAGS) $(CAMERA_CFLAGS) $(SRC) $(CAMERA_SRC) -o $(TARGET) $(LIBS) $(CAMERA_LIBS)
 
 clean:
 	rm -rf build

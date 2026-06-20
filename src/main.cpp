@@ -6,6 +6,7 @@
 #include "ir_remote.h"
 #include "gate.h"
 #include "houseControl.h"
+#include "cameraYOLO.h"
 #include <iostream>
 #include <thread>
 #include <atomic>
