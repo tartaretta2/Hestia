@@ -16,3 +16,4 @@ void toggleGateActivation();
 void MSListener();
 void toggleSiren();
 void shutdownSystem();
+void checkPlate(const std::string& plate);

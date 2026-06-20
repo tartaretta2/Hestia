@@ -10,6 +10,12 @@
 using namespace std;
 
 
+//targa autorizzate
+static const vector<string> authorizedPlates = {
+    "CZ889KF"
+};
+
+
 // Shared state variables defined in main.cpp
 extern atomic<bool> sirenOn;
 extern atomic<bool> alarmOn;
@@ -99,6 +105,17 @@ void shutdownSystem(){
    if (alarmOn) toggleAlarmActivation();
 }
 
+
+void checkPlate(const string& plate) {
+    for (const auto& p : authorizedPlates) {
+        if (plate == p) {
+            cout << "Targa autorizzata riconosciuta: " << plate << endl;
+            if (alarmOn) toggleAlarmActivation();  // stacca l'allarme
+            return;
+        }
+    }
+    cout << "Targa non autorizzata: " << plate << endl;
+}
 
 
 
