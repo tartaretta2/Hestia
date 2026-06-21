@@ -3,7 +3,7 @@ CFLAGS = -Wall -I./include
 
 LIBS = -lgpiod -llgpio -lpthread
 SRC = src/*.cpp
-TARGET = build/ir_ms_alarm
+TARGET = build/hestiaV1
 
 sim:
 	mkdir -p build

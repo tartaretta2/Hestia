@@ -1,9 +1,14 @@
 #pragma once
 
 #ifndef SIM
-    void initMS(const char* gpioChip, const unsigned int msPin);
-    int readMS();
-    void cleanupMS();
+bool initAlarmMS(const char* gpioChip, const unsigned int msPin);
+int readAlarmMS();
+bool isAlarmMSActive();
+
+bool initLightsMS(const char* gpioChip, const unsigned int msPin);
+int readLightsMS();
+
+void cleanupMSs();
 #endif
 
 int simulateMS();
