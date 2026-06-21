@@ -118,9 +118,9 @@ int readAlarmMS()
     return 0;
 }
 
-bool isAlarmMSActive(int offset)
+bool isAlarmMSActive()
 {
-    return requestLineActive(alarm_req, offset);
+    return requestLineActive(alarm_req, ALARM_MS);
 }
 
 // Setup the GPIO line for edge detection for the lights motion sensor
@@ -196,20 +196,24 @@ int readLightsMS()
     return gpiod_edge_event_get_event_type(event) == GPIOD_EDGE_EVENT_RISING_EDGE ? 1 : -1;
 }
 
-void cleanupMSs(){
+void cleanupAlarmMS()
+{
     if (alarm_buf) {
         gpiod_edge_event_buffer_free(alarm_buf);
         alarm_buf = nullptr;
     }
-    if(alarm_req) {
+    if (alarm_req) {
         gpiod_line_request_release(alarm_req);
         alarm_req = nullptr;
     }
-    if(alarm_chip) {
+    if (alarm_chip) {
         gpiod_chip_close(alarm_chip);
         alarm_chip = nullptr;
     }
+}
 
+void cleanupLightsMS()
+{
     lightsRunning = false;
     if (lights_buf) {
         gpiod_edge_event_buffer_free(lights_buf);

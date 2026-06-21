@@ -25,7 +25,7 @@ extern atomic<bool> running;
 // Threads used for asynchronous tasks
 static thread alarmMSthread;   // thread that blocks on alarm motion-sensor edge events
 static thread lightsThread;    // thread that blocks on lights motion-sensor edge events
-static atomic<uint64_t> lightsToken(0); // token used to check if thread should turn off lights
+static atomic<uint64_t> lightsOffToken(0); // token used to check if thread should turn off lights
 
 void toggleAlarmActivation() {
     if (!alarmOn) {

@@ -8,7 +8,8 @@ bool isAlarmMSActive();
 bool initLightsMS(const char* gpioChip, const unsigned int msPin);
 int readLightsMS();
 
-void cleanupMSs();
+void cleanupAlarmMS();
+void cleanupLightsMS();
 #endif
 
 int simulateMS();
