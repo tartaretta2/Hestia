@@ -4,16 +4,23 @@
 #include "buzzer.h"
 #include "ir_remote.h"
 #include "gate.h"
+#include "cameraYOLO.h"
 #include <iostream>
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <string>
 
 #ifndef SIM
     #include <gpiod.h>
 #endif
 
 using namespace std;
+
+//targa autorizzate
+static const vector<string> authorizedPlates = {
+    "CZ889KF"
+};
 
 
 // Shared state variables defined in main.cpp
@@ -47,6 +54,9 @@ void toggleAlarmActivation() {
 
         // Start the thread that blocks until a motion edge arrives.
         alarmMSthread = thread(alarmMSListener);
+        
+        //Start the camera for plate recognition
+        initCameraSystem();
 
     } else {
         // Disarm the alarm system: stop motion monitoring and release the GPIO request.
@@ -57,6 +67,8 @@ void toggleAlarmActivation() {
 
         // Now it is safe to release the request and free the GPIO resources.
         cleanupAlarmMS();
+      
+        stopCameraSystem();
 
         cout << "Alarm OFF" << endl;
     }
@@ -200,3 +212,22 @@ void shutdownSystem(){
     cleanupAlarmMS();
     cleanupLightsMS();
 }
+
+
+void checkPlate(const string& plate) {
+    for (const auto& p : authorizedPlates) {
+        if (plate == p) {
+            cout << "Targa autorizzata riconosciuta: " << plate << endl;
+            if (alarmOn) {
+                alarmOn = false;
+                sirenOn = false;
+                cout << "Alarm OFF (targa riconosciuta)" << endl;
+            }
+            return;
+        }
+    }
+    cout << "Targa non autorizzata: " << plate << endl;
+}
+
+
+

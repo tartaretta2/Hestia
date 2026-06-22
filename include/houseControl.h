@@ -1,6 +1,7 @@
 #pragma once
 #include "ir_sensor.h"
 #include <atomic>
+#include <string>
 
 #ifndef SIM
     #define GPIO_CHIP "/dev/gpiochip4"
@@ -29,3 +30,4 @@ void lightsMSListener();
 void startLightsListener();
 void toggleSiren();
 void shutdownSystem();
+void checkPlate(const std::string& plate);
