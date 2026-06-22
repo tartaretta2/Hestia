@@ -68,23 +68,29 @@ void temperatureMonitor()
 int main() {
 #ifndef SIM
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
-    initLED(GPIO_CHIP, LED_PIN);
-    initMS(GPIO_CHIP, MS_PIN);
-    initGate(GPIO_CHIP, GATE_PIN);
+    initAlarmLED(GPIO_CHIP, ALARM_LED);
+    initLightsLED(GPIO_CHIP, LIGHTS_LED);
+    initLightsMS(GPIO_CHIP, LIGHTS_MS);
     initIR(onRawFrame);
-    initDHT11();
-#endif
-    cout << "Press remote POWER button to turn on the alarm system." << endl;
+    initDHT11();   
+    initGate(GPIO_CHIP, GATE_PIN);
+    startLightsListener();
+    #endif
 
     thread tempThread(temperatureMonitor);
 
+    cout << "Press remote PLAY/PAUSE button to turn on the alarm system." << endl;
+
+    cout << "Press remote POWER button to turn off the whole system." << endl;
+
     while (running) {
+
         if (sirenOn) {
             #ifdef SIM
                 simulateLED();
                 simulateBuzzer();
             #else
-                toggleLED(LED_PIN);
+                toggleAlarmLED(ALARM_LED);
                 toggleBuzzer(BUZZER_PIN);
             #endif
         } else {
@@ -96,7 +102,7 @@ int main() {
     tempThread.join();
 
     // Ensure system is fully stopped before exiting
-    // (stops siren/alarm threads and releases GPIO resources)
+    // (stops siren/alarm/lights threads and releases GPIO resources)
     shutdownSystem();
 #ifndef SIM
     cleanupIR();

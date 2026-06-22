@@ -5,16 +5,29 @@
 
 #ifndef SIM
     #define GPIO_CHIP "/dev/gpiochip4"
-    #define MS_PIN 17
+    // GPIO pin numbers for the various devices
+
+    //alarm system
+    #define ALARM_MS 17
     #define BUZZER_PIN 27
-    #define LED_PIN 22
+    #define ALARM_LED 22
+    
+    //lights
+    #define LIGHTS_MS 26
+    #define LIGHTS_LED 16
+
+    //IR receiver
     #define IR_PIN 25
+    
+    //gate
     #define GATE_PIN 24                
 #endif
 
 void toggleAlarmActivation();
 void toggleGateActivation();
-void MSListener();
+void alarmMSListener();
+void lightsMSListener();
+void startLightsListener();
 void toggleSiren();
 void shutdownSystem();
 void checkPlate(const std::string& plate);
