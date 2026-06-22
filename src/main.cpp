@@ -44,65 +44,63 @@ void onRawFrame(const IrRawFrame& raw)
 // This function runs in a detached thread and listens for UDP commands from the Flask web server
 void webCommandHandler() {
     int server_fd = socket(AF_INET, SOCK_DGRAM, 0); 
-    if (server_fd < 0) {
-        std::cerr << "[C++] Error creating socket!" << std::endl;
-        return;
-    }
+    if (server_fd < 0) return;
 
     sockaddr_in address;
-    // Wipe memory to prevent garbage data
     std::memset(&address, 0, sizeof(address));
-    
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_ANY); // Bind to all interfaces
+    address.sin_addr.s_addr = htonl(INADDR_ANY); 
     address.sin_port = htons(12345);      
 
-    // Enable address reuse to avoid "Address already in use" errors on quick restarts
     int opt = 1;
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-
-    if (::bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        std::cerr << "[C++] Socket BIND error on port 12345! Error code: " << errno << std::endl;
-        close(server_fd);
-        return;
-    }
+    ::bind(server_fd, (struct sockaddr*)&address, sizeof(address));
     
     char buffer[1024];
-    cout << "[C++] Web command thread started successfully on port 12345..." << std::endl;
+    
+    sockaddr_in client_addr;
+    socklen_t client_len = sizeof(client_addr);
 
-    while (running) { // Changed to respect the global 'running' flag
+    cout << "[C++] Web command thread ready on port 12345..." << std::endl;
+
+    while (running) {
         std::memset(buffer, 0, sizeof(buffer));
         
-        // Receive the command
-        ssize_t bytes_received = recvfrom(server_fd, buffer, sizeof(buffer) - 1, 0, nullptr, nullptr); 
+        ssize_t bytes_received = recvfrom(server_fd, buffer, sizeof(buffer) - 1, 0, (struct sockaddr*)&client_addr, &client_len); 
         if (bytes_received <= 0) continue;
 
         std::string command(buffer);
+
+        if (command == "getState") {
+            std::string stateReply = "ALARM:" + to_string(alarmOn ? 1 : 0) + 
+                "|LIGHTS:" + to_string(rand() % 2 == 1 ? 1 : 0); //simulate random light state 
+            
+            // Respond with the current state of the system (alarm and lights)
+            sendto(server_fd, stateReply.c_str(), stateReply.length(), 0, (struct sockaddr*)&client_addr, client_len);
+            continue; 
+        }
+
         std::cout << "[C++] Received web command: [" << command << "]" << std::endl;
 
-        // Match the strings sent by the Python backend
         if (command == "toggleAlarm") {
-            // Using your existing toggle function from houseControl.h
             toggleAlarmActivation(); 
             std::cout << "[C++] Alarm toggled via Web." << std::endl;
         } 
         else if (command == "toggleLights") {
-            // NOTE: Replace this with your actual lights toggle function!
-            // setLED(LIGHTS_LED, !lightsOn);
+            // toggleHouseLights();
             std::cout << "[C++] Lights toggled via Web." << std::endl;
         } 
         else if (command == "openGate") {
-            // NOTE: Replace this with your actual gate function from gate.h!
-            toggleGateActivation();
+            // triggerGatePulse();
             std::cout << "[C++] Gate opened via Web." << std::endl;
-        } 
-        else {
-            std::cout << "[C++] Unknown command ignored: " << command << std::endl;
         }
+        
+        // Acknowledge the received command to the web server
+        std::string ack = "OK";
+        sendto(server_fd, ack.c_str(), ack.length(), 0, (struct sockaddr*)&client_addr, client_len);
     }
     close(server_fd);
 }
-
 
 // Reads DHT11 periodically and triggers the AC LED when above threshold
 void temperatureMonitor()

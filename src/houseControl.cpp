@@ -39,7 +39,7 @@ atomic<bool> disarmRequested(false); //flag set by plate recognition to request 
 void toggleAlarmActivation() {
     #ifdef SIM
         alarmOn = !alarmOn;
-        cout << (alarmOn ? "Alarm OFF" : "Alarm ON") << endl;
+        cout << (alarmOn ? "Alarm ON" : "Alarm OFF") << endl;
     #else
     if (!alarmOn) {
         // Arm the alarm system: create the GPIO request and start the listener.
