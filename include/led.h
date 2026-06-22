@@ -13,4 +13,4 @@ void setLED(const unsigned int ledPin, bool on);
 void cleanupLEDs();
 #endif
 
-void simulateLED();
+void simulateLED(bool on);

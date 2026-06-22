@@ -37,6 +37,10 @@ static atomic<uint64_t> lightsOffToken(0); // token used to check if thread shou
 atomic<bool> disarmRequested(false); //flag set by plate recognition to request disarming the alarm system (checked in main loop)
 
 void toggleAlarmActivation() {
+    #ifdef SIM
+        alarmOn = !alarmOn;
+        cout << (alarmOn ? "Alarm OFF" : "Alarm ON") << endl;
+    #else
     if (!alarmOn) {
         // Arm the alarm system: create the GPIO request and start the listener.
         if (!initAlarmMS(GPIO_CHIP, ALARM_MS)) {
@@ -74,6 +78,7 @@ void toggleAlarmActivation() {
 
         cout << "Alarm OFF" << endl;
     }
+    #endif
 }
 
 void toggleSiren() {
@@ -123,7 +128,7 @@ void lightsMSListener() {
 #ifdef SIM
             if (simulateMS()) {
                 if (!lightsOn) {
-                    setLED(LIGHTS_LED, true);
+                    simulateLED(true);
                     lightsOn = true;
                     cout << "LightsMS: motion detected, lights ON" << endl;
                 }
@@ -136,7 +141,7 @@ void lightsMSListener() {
                         this_thread::sleep_for(chrono::seconds(10));
                         if (!running) return;
                         if (token == lightsOffToken.load()) {
-                            setLED(LIGHTS_LED, false);
+                            simulateLED(false);
                         }
                     }).detach();
                     lightsOn = false;
@@ -175,10 +180,12 @@ void lightsMSListener() {
         }
     }
 
+    #ifndef SIM
     // Ensure lights are off on exit
     if (lightsOn) {
         setLED(LIGHTS_LED, false);
     }
+    #endif
 
     // Wait for all listener threads to cleanly exit
     if (lightsThread.joinable()) lightsThread.join();
@@ -202,6 +209,7 @@ void shutdownSystem(){
     // Request main loop and all listeners to exit
     running = false;
 
+    #ifndef SIM
     // Make sure siren is turned off first, then disable the alarm
     setLED(ALARM_LED, false);
     setLED(LIGHTS_LED, false);
@@ -215,6 +223,7 @@ void shutdownSystem(){
     cleanupLightsMS();
     cleanupGate(GATE_PIN);
     dht11_api::cleanupDHT11();
+    #endif
 }
 
 

@@ -177,7 +177,7 @@ void cleanupLEDs()
 
 #endif
 
-void simulateLED()
+void simulateLED(bool on)
 {
-    cout << "LED ON" << endl;
+    cout << "LED " << (on ? "ON" : "OFF") << endl;
 }
