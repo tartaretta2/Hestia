@@ -20,7 +20,10 @@
     #define IR_PIN 25
     
     //gate
-    #define GATE_PIN 24                
+    #define GATE_PIN 24   
+    
+    //DHT11
+    #define TEMP_LED 3
 #endif
 
 void toggleAlarmActivation();

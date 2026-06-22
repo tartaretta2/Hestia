@@ -50,7 +50,7 @@ void temperatureMonitor()
                 // Transition warm -> cold: signal the heater is needed
                 cout << "[HEATER] ON (cold detected)" << endl;
                 #ifndef SIM
-                    toggleLED(LED_PIN);
+                    setLED(TEMP_LED, true);
                 #else
                     simulateLED();
                 #endif
@@ -71,6 +71,7 @@ int main() {
     initAlarmLED(GPIO_CHIP, ALARM_LED);
     initLightsLED(GPIO_CHIP, LIGHTS_LED);
     initLightsMS(GPIO_CHIP, LIGHTS_MS);
+    initTempLED(GPIO_CHIP, TEMP_LED);
     initIR(onRawFrame);
     initDHT11();   
     initGate(GPIO_CHIP, GATE_PIN);
@@ -101,16 +102,10 @@ int main() {
 
     tempThread.join();
 
+#ifndef SIM
     // Ensure system is fully stopped before exiting
     // (stops siren/alarm/lights threads and releases GPIO resources)
     shutdownSystem();
-#ifndef SIM
-    cleanupIR();
-    cleanupBuzzer(BUZZER_PIN);
-    cleanupLED();
-    cleanupMS();
-    cleanupGate(GATE_PIN);
-    cleanupDHT11();
 #endif
     cout << "System shut down." << endl;
     return 0;

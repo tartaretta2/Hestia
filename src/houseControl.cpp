@@ -211,6 +211,8 @@ void shutdownSystem(){
     cleanupLEDs();
     cleanupAlarmMS();
     cleanupLightsMS();
+    cleanupGate(GATE_PIN);
+    cleanupDHT11();
 }
 
 
