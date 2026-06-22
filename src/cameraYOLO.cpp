@@ -1,17 +1,23 @@
 #include "cameraYOLO.h"
 #include "houseControl.h"
+#include <thread>
+#include <string>
+#include <iostream>
+#include <atomic>
+
+#ifndef SIM
 #include <openvino/openvino.hpp>
 #include <opencv2/opencv.hpp>
 #include <tesseract/baseapi.h>
 #include <vector>
-#include <thread>
-#include <string>
-#include <iostream>
+#endif
 
+using namespace std;
 
 static thread cameraThread;
 extern atomic<bool> alarmOn;
 
+#ifndef SIM
 
 string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
     Rect imageRect(0, 0, frame.cols, frame.rows);
@@ -197,8 +203,34 @@ void cameraLoop(){
 }
 
 
+//Simulation mode (no camera)
+//after 7s of simulated observation it simulates the recognition of a plate
+
+#else
+
+#include <chrono>
+
+static void cameraLoopSim(){
+    cout << "[CAMERA SIM] Inizializzata. Targa riconosciuta tra ~7 secondi..." << endl;
+
+    for (int i = 0; i < 70 && alarmOn; i++) {
+        this_thread::sleep_for(chrono::milliseconds(100));
+    }
+
+    if (!alarmOn) return; 
+
+    cout << "[CAMERA SIM] Targa rilevata" << endl;
+    checkPlate("CZ889KF");
+}
+
+#endif
+
 void initCameraSystem() {
+#ifndef SIM
     cameraThread = thread(cameraLoop);
+#else
+    cameraThread = thread(cameraLoopSim);
+#endif
 }
 
 void stopCameraSystem() {

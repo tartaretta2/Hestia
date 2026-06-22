@@ -2,12 +2,12 @@ CC = g++
 CFLAGS = -Wall -std=c++17 -I./include
 LIBS = -lgpiod -llgpio -lpthread
 
-# Path OpenVINO (installato nella cartella dei pacchetti Python)
+# Path OpenVINO
 OPENVINO_DIR = /home/giovanni/.local/lib/python3.13/site-packages/openvino
 OPENVINO_INC = $(OPENVINO_DIR)/include
 OPENVINO_LIB = $(OPENVINO_DIR)/libs
 
-# Librerie per la parte camera (OpenVINO + OpenCV + Tesseract)
+# Libraries for camera (OpenVINO + OpenCV + Tesseract)
 CAMERA_CFLAGS = $(shell pkg-config --cflags opencv4) -I$(OPENVINO_INC)
 CAMERA_LIBS = $(shell pkg-config --libs opencv4) \
               -ltesseract -lleptonica \
@@ -19,7 +19,7 @@ TARGET = build/hestiaV1
 
 sim:
 	mkdir -p build
-	$(CC) $(CFLAGS) -DSIM $(SRC) -o $(TARGET)
+	$(CC) $(CFLAGS) -DSIM $(SRC) $(CAMERA_SRC) -o $(TARGET) -lpthread
 
 release:
 	mkdir -p build
