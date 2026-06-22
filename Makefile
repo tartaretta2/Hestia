@@ -15,7 +15,7 @@ CAMERA_LIBS = $(shell pkg-config --libs opencv4) \
 
 SRC = $(filter-out src/cameraYOLO.cpp, $(wildcard src/*.cpp))
 CAMERA_SRC = src/cameraYOLO.cpp
-TARGET = build/ir_ms_alarm
+TARGET = build/hestiaV1
 
 sim:
 	mkdir -p build

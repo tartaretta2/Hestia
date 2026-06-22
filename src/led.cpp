@@ -11,16 +11,18 @@
 using namespace std;
 
 #ifndef SIM
-static gpiod_chip *chip = nullptr;
-static gpiod_line_request *request = nullptr;
+static gpiod_chip *alarm_chip = nullptr;
+static gpiod_line_request *alarm_req = nullptr;
+static gpiod_chip *lights_chip = nullptr;
+static gpiod_line_request *lights_req = nullptr;
 
-void initLED(const char *gpioChip, const unsigned int ledPin)
+void initAlarmLED(const char *gpioChip, const unsigned int ledPin)
 {
-    cout << "Initializing LED on GPIO chip: " << gpioChip << ", pin: " << ledPin << endl;
-    chip = gpiod_chip_open(gpioChip);
-    if (!chip)
+    cout << "Initializing Alarm LED on GPIO chip: " << gpioChip << ", pin: " << ledPin << endl;
+    alarm_chip = gpiod_chip_open(gpioChip);
+    if (!alarm_chip)
     {
-        cerr << gpiod_chip_get_info(chip) << endl
+        cerr << gpiod_chip_get_info(alarm_chip) << endl
              << "Failed to open GPIO chip" << endl;
         return;
     }
@@ -36,8 +38,8 @@ void initLED(const char *gpioChip, const unsigned int ledPin)
     gpiod_request_config *requestConf = gpiod_request_config_new();
     gpiod_request_config_set_consumer(requestConf, "led");
 
-    request = gpiod_chip_request_lines(chip, requestConf, lineConf);
-    if (!request)
+    alarm_req = gpiod_chip_request_lines(alarm_chip, requestConf, lineConf);
+    if (!alarm_req)
         cerr << "Failed to request LED GPIO line" << endl;
 
     gpiod_line_settings_free(settings);
@@ -45,21 +47,84 @@ void initLED(const char *gpioChip, const unsigned int ledPin)
     gpiod_request_config_free(requestConf);
 }
 
-void toggleLED(const unsigned int ledPin){
-    if (!request) return;
+void initLightsLED(const char *gpioChip, const unsigned int ledPin)
+{
+    cout << "Initializing Lights LED on GPIO chip: " << gpioChip << ", pin: " << ledPin << endl;
+    lights_chip = gpiod_chip_open(gpioChip);
+    if (!lights_chip)
+    {
+        cerr << gpiod_chip_get_info(lights_chip) << endl
+             << "Failed to open GPIO chip" << endl;
+        return;
+    }
+
+    // Configure line as output and set to low
+    gpiod_line_settings *settings = gpiod_line_settings_new();
+    gpiod_line_settings_set_direction(settings, GPIOD_LINE_DIRECTION_OUTPUT);
+    gpiod_line_settings_set_output_value(settings, GPIOD_LINE_VALUE_INACTIVE);
+
+    gpiod_line_config *lineConf = gpiod_line_config_new();
+    gpiod_line_config_add_line_settings(lineConf, &ledPin, 1, settings);
+
+    gpiod_request_config *requestConf = gpiod_request_config_new();
+    gpiod_request_config_set_consumer(requestConf, "lights_led");
+
+    lights_req = gpiod_chip_request_lines(lights_chip, requestConf, lineConf);
+    if (!lights_req)
+        cerr << "Failed to request Lights LED GPIO line" << endl;
+
+    gpiod_line_settings_free(settings);
+    gpiod_line_config_free(lineConf);
+    gpiod_request_config_free(requestConf);
+}
+
+void toggleAlarmLED(const unsigned int ledPin)
+{
+    if (!alarm_req)
+        return;
 
     int i;
-    for(i = 0; i < 5; ++i){
-        gpiod_line_request_set_value(request, ledPin, GPIOD_LINE_VALUE_ACTIVE);
+    for (i = 0; i < 5; ++i)
+    {
+        gpiod_line_request_set_value(alarm_req, ledPin, GPIOD_LINE_VALUE_ACTIVE);
         this_thread::sleep_for(chrono::milliseconds(70));
-        gpiod_line_request_set_value(request, ledPin, GPIOD_LINE_VALUE_INACTIVE);
+        gpiod_line_request_set_value(alarm_req, ledPin, GPIOD_LINE_VALUE_INACTIVE);
         this_thread::sleep_for(chrono::milliseconds(30));
     }
 }
 
-void cleanupLED(){
-    if(request) gpiod_line_request_release(request);
-    if(chip) gpiod_chip_close(chip);
+void setLED(const unsigned int ledPin, bool on)
+{
+    if (ledPin == ALARM_LED)
+    {
+        if (!alarm_req)
+            return;
+        if (on)
+            gpiod_line_request_set_value(alarm_req, ledPin, GPIOD_LINE_VALUE_ACTIVE);
+        else
+            gpiod_line_request_set_value(alarm_req, ledPin, GPIOD_LINE_VALUE_INACTIVE);
+    }
+    else if (ledPin == LIGHTS_LED)
+    {
+        if (!lights_req)
+            return;
+        if (on)
+            gpiod_line_request_set_value(lights_req, ledPin, GPIOD_LINE_VALUE_ACTIVE);
+        else
+            gpiod_line_request_set_value(lights_req, ledPin, GPIOD_LINE_VALUE_INACTIVE);
+    }
+}
+
+void cleanupLEDs()
+{
+    if (alarm_req)
+        gpiod_line_request_release(alarm_req);
+    if (alarm_chip)
+        gpiod_chip_close(alarm_chip);
+    if (lights_req)
+        gpiod_line_request_release(lights_req);
+    if (lights_chip)
+        gpiod_chip_close(lights_chip);
 }
 
 #endif
