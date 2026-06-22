@@ -23,7 +23,7 @@
     #define GATE_PIN 24   
     
     //DHT11
-    #define TEMP_LED 3
+    #define TEMP_LED 23
 #endif
 
 void toggleAlarmActivation();

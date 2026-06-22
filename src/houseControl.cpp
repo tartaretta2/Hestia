@@ -5,6 +5,7 @@
 #include "ir_remote.h"
 #include "gate.h"
 #include "cameraYOLO.h"
+#include "Dht11.h"
 #include <iostream>
 #include <thread>
 #include <atomic>
@@ -212,7 +213,7 @@ void shutdownSystem(){
     cleanupAlarmMS();
     cleanupLightsMS();
     cleanupGate(GATE_PIN);
-    cleanupDHT11();
+    dht11_api::cleanupDHT11();
 }
 
 
