@@ -34,6 +34,7 @@ extern atomic<bool> running;
 static thread alarmMSthread;   // thread that blocks on alarm motion-sensor edge events
 static thread lightsThread;    // thread that blocks on lights motion-sensor edge events
 static atomic<uint64_t> lightsOffToken(0); // token used to check if thread should turn off lights
+atomic<bool> disarmRequested(false); //flag set by plate recognition to request disarming the alarm system (checked in main loop)
 
 void toggleAlarmActivation() {
     if (!alarmOn) {
@@ -221,10 +222,10 @@ void checkPlate(const string& plate) {
     for (const auto& p : authorizedPlates) {
         if (plate == p) {
             cout << "Targa autorizzata riconosciuta: " << plate << endl;
+
             if (alarmOn) {
-                alarmOn = false;
-                sirenOn = false;
-                cout << "Alarm OFF (targa riconosciuta)" << endl;
+                cout << "Disarmo richiesto da targa riconosciuta" << endl;
+                disarmRequested = true;
             }
             return;
         }

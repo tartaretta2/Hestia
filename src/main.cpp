@@ -65,6 +65,8 @@ void temperatureMonitor()
     }
 }
 
+extern std::atomic<bool> disarmRequested;
+
 int main() {
 #ifndef SIM
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
@@ -85,6 +87,10 @@ int main() {
     cout << "Press remote POWER button to turn off the whole system." << endl;
 
     while (running) {
+        
+        if (disarmRequested.exchange(false)) {
+            if (alarmOn) toggleAlarmActivation();
+        }
 
         if (sirenOn) {
             #ifdef SIM

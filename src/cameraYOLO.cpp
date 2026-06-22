@@ -60,8 +60,6 @@ string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
     int p = 15;
     copyMakeBorder(cleanMask, cleanMask, p, p, p, p, BORDER_CONSTANT, Scalar(255));
 
-    imshow("DEBUG: Maschera Corretta", cleanMask);
-
     //OCR
     api->SetImage(cleanMask.data, cleanMask.cols, cleanMask.rows, 1, cleanMask.step);
     char *outText = api->GetUTF8Text();
@@ -114,7 +112,6 @@ void cameraLoop(){
     cout << endl;
 
     Mat frame;
-    namedWindow("Licence Plate Detector C++", WINDOW_NORMAL);
 
     while (alarmOn) {
         cap >> frame;
@@ -191,11 +188,11 @@ void cameraLoop(){
         }
 
 
-        imshow("Licence Plate Detector C++", frame);
         if (waitKey(1) == 'q') break;
     }
 
     api->End();
+    cap.release();
     return;
 }
 
