@@ -21,8 +21,8 @@ atomic<bool> sirenOn(false);   // true when the buzzer/LED should be active
 atomic<bool> alarmOn(false);   // true when the alarm system is armed
 atomic<bool> running(true);    // main loop continues while true
 
-// Heater threshold: turn the heater LED on when temperature drops below it
-constexpr float HEATER_THRESHOLD_C =20.0f;
+//AC threshold: turn the AC led on when temperature > 26C
+constexpr float AC_THRESHOLD_C = 26.0f;
 
 // Called by the IR receiver when a complete NEC frame is captured.
 // It decodes the frame and dispatches the resulting command.
@@ -37,27 +37,31 @@ void onRawFrame(const IrRawFrame& raw)
     handleKey(frame.command);
 }
 
-// Reads DHT11 periodically and triggers the heater LED when below threshold.
+//reads DHT11 periodically and triggers the AC LED when above threshold
 void temperatureMonitor()
 {
-    bool heaterOn = false;
+    bool acOn = false;
     while (running) {
         float temp = 0.0f, hum = 0.0f;
         if (readDHT11(temp, hum)) {
             cout << "[DHT11] Temp: " << temp << " C  |  Humidity: " << hum << " %" << endl;
-            bool shouldBeOn = (temp < HEATER_THRESHOLD_C);
-            if (shouldBeOn && !heaterOn) {
-                // Transition warm -> cold: signal the heater is needed
-                cout << "[HEATER] ON (cold detected)" << endl;
+            bool shouldBeOn = (temp > AC_THRESHOLD_C);
+            if (shouldBeOn && !acOn) {
+                //transition from cool to  hot (turn the AC on)
+                cout << "[AC] ON (hot detected)" << endl;
                 #ifndef SIM
                     setLED(TEMP_LED, true);
                 #else
                     simulateLED();
                 #endif
-            } else if (!shouldBeOn && heaterOn) {
-                cout << "[HEATER] OFF (warm again)" << endl;
+            } else if (!shouldBeOn && acOn) {
+                //transition from hot to cool (turn the AC off)
+                cout << "[AC] OFF (cool again)" << endl;
+                #ifndef SIM
+                    setLED(TEMP_LED, false);
+                #endif
             }
-            heaterOn = shouldBeOn;
+            acOn = shouldBeOn;
         } else {
             cout << "[DHT11] Read failed." << endl;
         }
