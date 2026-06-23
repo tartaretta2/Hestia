@@ -74,6 +74,9 @@ string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
     int p = 15;
     copyMakeBorder(cleanMask, cleanMask, p, p, p, p, BORDER_CONSTANT, Scalar(255));
 
+    //UNCOMMENT TO DEBUG CAMERA
+    // imshow("DEBUG: Maschera Corretta", cleanMask);
+
     // OCR
     api->SetImage(cleanMask.data, cleanMask.cols, cleanMask.rows, 1, cleanMask.step);
     char *outText = api->GetUTF8Text();
@@ -124,7 +127,17 @@ void cameraLoop(){
     VideoCapture cap(0);
     if (!cap.isOpened()) return;
 
+    //UNCOMMENT TO DEBUG CAMERA
+    // auto output = infer_request.get_output_tensor(0);
+    // auto shape = output.get_shape();
+    // cout << "DEBUG YOLO26 - Output Shape: ";
+    // for (auto s : shape) cout << s << " ";
+    // cout << endl;
+
     Mat frame;
+
+    //UNCOMMENT TO DEBUG CAMERA
+    // namedWindow("Licence Plate Detector C++", WINDOW_NORMAL);
 
     while (alarmOn) {
         //grab a frame and stop if the stream ended or returned nothing
@@ -213,6 +226,9 @@ void cameraLoop(){
             putText(frame, label, Point(boxes[idx].x, boxes[idx].y - 10), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 1);
         }
 
+        //UNCOMMENT TO DEBUG CAMERA
+        // imshow("Licence Plate Detector C++", frame);
+        // if (waitKey(1) == 'q') break;
     }
 
     //release Tesseract and the camera before leaving the thread
