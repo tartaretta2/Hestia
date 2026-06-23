@@ -229,10 +229,10 @@ void shutdownSystem(){
 void checkPlate(const string& plate) {
     for (const auto& p : authorizedPlates) {
         if (plate == p) {
-            cout << "Targa autorizzata riconosciuta: " << plate << endl;
+            cout << "Authorized plate recognized: " << plate << endl;
 
             if (alarmOn) {
-                cout << "Disarmo richiesto da targa riconosciuta" << endl;
+                cout << "Disarm requested by recognized plate" << endl;
                 disarmRequested = true;
 
                 toggleGate(GATE_PIN);
@@ -242,7 +242,7 @@ void checkPlate(const string& plate) {
             return;
         }
     }
-    cout << "Targa non autorizzata: " << plate << endl;
+    cout << "Unauthorized plate detected: " << plate << endl;
 }
 
 
