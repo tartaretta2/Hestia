@@ -28,7 +28,8 @@ static const vector<string> authorizedPlates = {
 extern atomic<bool> sirenOn;
 extern atomic<bool> alarmOn;
 extern atomic<bool> running;
-
+extern atomic<bool> lightsOn;
+extern atomic<bool> gateOpen;
 
 // Threads used for asynchronous tasks
 static thread alarmMSthread;   // thread that blocks on alarm motion-sensor edge events
@@ -118,8 +119,6 @@ void alarmMSListener() {
 
 void lightsMSListener() {
     cout << "Lights motion sensor listener started." << endl;
-
-    bool lightsOn = false;
 
     // Listener loop: same pattern as alarm, but always running.
     // No condition like alarmOn; just loop while the program is running.

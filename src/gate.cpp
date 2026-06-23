@@ -10,6 +10,8 @@
 
 using namespace std;
 
+extern atomic<bool> gateOpen;
+
 #ifndef SIM
 static int handle = -1;
 
@@ -23,7 +25,6 @@ static const int STEP_DELAY_MS = 15; // pausa tra un passo e l'altro (regola la 
 static const int SERVO_FREQ_HZ = 50; // frequenza standard per servi hobby
 
 // Stato del cancello, persistente tra le chiamate
-static bool gateOpen = false;
 
 void initGate(const char *gpioChip, const unsigned int gatePin)
 {
@@ -94,8 +95,7 @@ void cleanupGate(const unsigned int gatePin)
 
 void simulateGate()
 {
-    static bool open = false;
-    if (!open)
+    if (!gateOpen)
     {
         cout << "Gate opened (simulated)" << endl;
     }
@@ -103,5 +103,5 @@ void simulateGate()
     {
         cout << "Gate closed (simulated)" << endl;
     }
-    open = !open;
+    gateOpen = !gateOpen;
 }

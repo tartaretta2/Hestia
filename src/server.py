@@ -66,7 +66,7 @@ def home():
                     💡 Loading...
                 </button>
                 <button id="btnGate" onclick="sendCommand('openGate')" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition">
-                    🚪 Open gate
+                    🚪 Loading...
                 </button>
             </div>
             
@@ -96,6 +96,7 @@ def home():
                             
                             document.getElementById('btnAlarm').innerText = data.data.ALARM ? '🚨 Turn off alarm' : '🚨 Turn on alarm';
                             document.getElementById('btnLights').innerText = data.data.LIGHTS ? '💡 Turn off lights' : '💡 Turn on lights';
+                            document.getElementById('btnGate').innerText = data.data.GATE ? ' 🚪 Close gate' : ' 🚪 Open gate';
                         } else {
                             statusDiv.innerText = "🔴 Device offline";
                             statusDiv.className = "mt-6 p-2 text-sm text-center font-bold text-red-600";

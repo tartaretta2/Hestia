@@ -24,6 +24,8 @@ using namespace dht11_api;
 atomic<bool> sirenOn(false);   // true when the buzzer/LED should be active
 atomic<bool> alarmOn(false);   // true when the alarm system is armed
 atomic<bool> running(true);    // main loop continues while true
+atomic<bool> lightsOn(false);  // true when the lights are on
+atomic<bool> gateOpen(false);   // true when the gate is open
 
 // AC threshold: turn the AC led on when temperature > 26C
 constexpr float AC_THRESHOLD_C = 26.0f;
@@ -55,25 +57,34 @@ void webCommandHandler() {
     int opt = 1;
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     ::bind(server_fd, (struct sockaddr*)&address, sizeof(address));
-    
+
+    // Set a timeout for recvfrom to avoid blocking indefinitely
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(server_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
     char buffer[1024];
-    
     sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
 
     cout << "[C++] Web command thread ready on port 12345..." << std::endl;
 
-    while (running) {
-        std::memset(buffer, 0, sizeof(buffer));
+    while (running) { 
+        memset(buffer, 0, sizeof(buffer));
         
         ssize_t bytes_received = recvfrom(server_fd, buffer, sizeof(buffer) - 1, 0, (struct sockaddr*)&client_addr, &client_len); 
-        if (bytes_received <= 0) continue;
+        
+        if (bytes_received <= 0) {
+            continue; 
+        }
 
-        std::string command(buffer);
+        string command(buffer);
 
         if (command == "getState") {
-            std::string stateReply = "ALARM:" + to_string(alarmOn ? 1 : 0) + 
-                "|LIGHTS:" + to_string(rand() % 2 == 1 ? 1 : 0); //simulate random light state 
+            string stateReply = "ALARM:" + to_string(alarmOn ? 1 : 0) + 
+                "|LIGHTS:" + to_string(lightsOn ? 1 : 0) +
+                "|GATE:" + to_string(gateOpen ? 1 : 0); 
             
             // Respond with the current state of the system (alarm and lights)
             sendto(server_fd, stateReply.c_str(), stateReply.length(), 0, (struct sockaddr*)&client_addr, client_len);
@@ -91,8 +102,8 @@ void webCommandHandler() {
             std::cout << "[C++] Lights toggled via Web." << std::endl;
         } 
         else if (command == "openGate") {
-            // triggerGatePulse();
-            std::cout << "[C++] Gate opened via Web." << std::endl;
+            toggleGateActivation();
+            cout << "[C++] Gate toggled via Web." << std::endl;
         }
         
         // Acknowledge the received command to the web server
@@ -130,13 +141,13 @@ void temperatureMonitor()
             }
             acOn = shouldBeOn;
         } else {
-            // cout << "[DHT11] Read failed." << endl;
+            cout << "[DHT11] Read failed." << endl;
         }
         this_thread::sleep_for(chrono::seconds(3));
     }
 }
 
-extern std::atomic<bool> disarmRequested;
+extern atomic<bool> disarmRequested;
 
 int main() {
 #ifndef SIM
@@ -155,7 +166,6 @@ int main() {
 
     // Start the web commands handler thread
     thread webThread(webCommandHandler);
-    webThread.detach(); // Detach allows it to run independently in the background
 
     cout << "Press remote PLAY/PAUSE button to turn on the alarm system." << endl;
     cout << "Press remote POWER button to turn off the whole system." << endl;
@@ -180,7 +190,14 @@ int main() {
         }
     }
 
-    tempThread.join();
+    if (tempThread.joinable()) {
+        tempThread.join();
+    }
+
+    cout << "Shutting down web interface..." << endl;    
+    if (webThread.joinable()) {
+        webThread.join(); 
+    }
 
 #ifndef SIM
     // Ensure system is fully stopped before exiting
