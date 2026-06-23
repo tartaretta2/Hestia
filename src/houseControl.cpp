@@ -234,6 +234,10 @@ void checkPlate(const string& plate) {
             if (alarmOn) {
                 cout << "Disarmo richiesto da targa riconosciuta" << endl;
                 disarmRequested = true;
+
+                toggleGate(GATE_PIN);
+                this_thread::sleep_for(chrono::seconds(5));
+                toggleGate(GATE_PIN);
             }
             return;
         }
