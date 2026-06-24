@@ -55,6 +55,13 @@ def home():
         <script src="https://cdn.tailwindcss.com"></script>
     </head>
     <body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4 font-sans">
+        <div class="mb-6 text-center">
+            <h1 class="text-4xl font-bold text-gray-800">Hestia</h1>
+            <p class="text-gray-600">Remote control panel</p>
+        </div>
+        <button id="btnShutdown" onclick="sendCommand('shutdownSystem')" class="mb-6 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-6 rounded-xl transition">
+            🔌 Shutdown system
+        </button>
         <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-md">
             <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Control panel</h1>
             

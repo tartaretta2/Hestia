@@ -105,7 +105,13 @@ void webCommandHandler() {
             toggleGateActivation();
             cout << "[C++] Gate toggled via Web." << std::endl;
         }
-        
+        else if (command == "shutdownSystem") {
+            shutdownSystem();
+            cout << "[C++] System shutdown requested via Web." << std::endl;
+        }
+        else {
+            cout << "[C++] Unknown command received: [" << command << "]" << std::endl;
+        }
         // Acknowledge the received command to the web server
         std::string ack = "OK";
         sendto(server_fd, ack.c_str(), ack.length(), 0, (struct sockaddr*)&client_addr, client_len);
