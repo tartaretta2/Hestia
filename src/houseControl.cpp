@@ -52,18 +52,26 @@ void toggleAlarmActivation() {
         alarmOn = true;
         cout << "Alarm ON" << endl;
 
+        cout << "You have 10 seconds to leave the house before the motion sensor triggers." << endl;
+
+        for (int i = 10; i > 0; --i) {
+            cout << i << "..." << endl;
+            this_thread::sleep_for(chrono::seconds(1));
+        }
+
         // If the PIR is already active when arming, trigger immediately so
         // we do not miss the first state after a disarm/re-arm cycle.
-        if (isAlarmMSActive() && !sirenOn) {
-            cout << "Motion already active, triggering siren immediately." << endl;
-            toggleSiren();
-        }
+        // if (isAlarmMSActive() && !sirenOn) {
+        //     cout << "Motion already active, triggering siren immediately." << endl;
+        //     toggleSiren();
+        // }
+
+
+        //Start the camera for plate recognition
+        initCameraSystem();
 
         // Start the thread that blocks until a motion edge arrives.
         alarmMSthread = thread(alarmMSListener);
-        
-        //Start the camera for plate recognition
-        initCameraSystem();
 
     } else {
         // Disarm the alarm system: stop motion monitoring and release the GPIO request.
@@ -92,7 +100,6 @@ void toggleSiren() {
 }
 
 void alarmMSListener() {
-    cout << "Alarm motion sensor listener started." << endl;
 
     // Block until an edge event is delivered by the kernel.
     // No polling loop is used here.
@@ -104,7 +111,7 @@ void alarmMSListener() {
             if (readAlarmMS())
 #endif
             {
-                if (!sirenOn) {
+                if (isAlarmMSActive() && !sirenOn) {
                     cout << "Motion detected! Triggering siren." << endl;
                     toggleSiren();
                 }

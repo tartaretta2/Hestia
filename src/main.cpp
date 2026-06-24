@@ -91,29 +91,29 @@ void webCommandHandler() {
             continue; 
         }
 
-        std::cout << "[C++] Received web command: [" << command << "]" << std::endl;
+        cout << "[C++] Received web command: [" << command << "]" << endl;
 
         if (command == "toggleAlarm") {
             toggleAlarmActivation(); 
-            std::cout << "[C++] Alarm toggled via Web." << std::endl;
+            cout << "[C++] Alarm toggled via Web." << endl;
         } 
         else if (command == "toggleLights") {
             toggleLightsActivation();
-            std::cout << "[C++] Lights toggled via Web." << std::endl;
+            cout << "[C++] Lights toggled via Web." << endl;
         } 
         else if (command == "openGate") {
             toggleGateActivation();
-            cout << "[C++] Gate toggled via Web." << std::endl;
+            cout << "[C++] Gate toggled via Web." << endl;
         }
         else if (command == "shutdownSystem") {
             shutdownSystem();
-            cout << "[C++] System shutdown requested via Web." << std::endl;
+            cout << "[C++] System shutdown requested via Web." << endl;
         }
         else {
-            cout << "[C++] Unknown command received: [" << command << "]" << std::endl;
+            cout << "[C++] Unknown command received: [" << command << "]" << endl;
         }
         // Acknowledge the received command to the web server
-        std::string ack = "OK";
+        string ack = "OK";
         sendto(server_fd, ack.c_str(), ack.length(), 0, (struct sockaddr*)&client_addr, client_len);
     }
     close(server_fd);
@@ -126,7 +126,7 @@ void temperatureMonitor()
     while (running) {
         float temp = 0.0f, hum = 0.0f;
         if (readDHT11(temp, hum)) {
-            // cout << "[DHT11] Temp: " << temp << " C  |  Humidity: " << hum << " %" << endl;
+            cout << "[DHT11] Temp: " << temp << " C  |  Humidity: " << hum << " %" << endl;
             bool shouldBeOn = (temp > AC_THRESHOLD_C);
             if (shouldBeOn && !acOn) {
                 // transition from cool to hot (turn the AC on)

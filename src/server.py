@@ -57,7 +57,7 @@ def home():
     <body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-4 font-sans">
         <div class="mb-6 text-center">
             <h1 class="text-4xl font-bold text-gray-800">Hestia</h1>
-            <p class="text-gray-600">Remote control panel</p>
+            <p class="text-gray-600">Smart home control</p>
         </div>
         <button id="btnShutdown" onclick="sendCommand('shutdownSystem')" class="mb-6 bg-gray-800 hover:bg-gray-900 text-white font-semibold py-3 px-6 rounded-xl transition">
             🔌 Shutdown system
