@@ -8,11 +8,11 @@ using namespace std;
 // Key - Name - Action
 static const Key KEYS[] = {
     { KEY_POWER,      "POWER",      Action::ShutdownSystem},
-    { KEY_VOL_UP,     "VOL+",       Action::LightsUp      },
-    { KEY_VOL_DOWN,   "VOL-",       Action::LightsDown    },
+    { KEY_VOL_UP,     "VOL+",       Action::None          },
+    { KEY_VOL_DOWN,   "VOL-",       Action::None          },
     { KEY_1,          "1",          Action::LightsToggle  },
     { KEY_2,          "2",          Action::GateToggle    },
-    { KEY_3,          "3",          Action::HeatingToggle },
+    { KEY_3,          "3",          Action::None          },
     { KEY_FUNC_STOP,  "FUNC/STOP",  Action::None          },
     { KEY_REWIND,     "<<",         Action::None          },
     { KEY_PLAY_PAUSE, "PLAY/PAUSE", Action::AlarmToggle   },
@@ -48,14 +48,6 @@ const char *actionName(Action action)
         return "LightsToggle";
     case Action::GateToggle:
         return "GateToggle";
-    case Action::HeatingToggle:
-        return "HeatingToggle";
-    case Action::LightsUp:
-        return "LightsUp";
-    case Action::LightsDown:
-        return "LightsDown";
-    case Action::SirenToggle:
-        return "SirenToggle";
     case Action::ShutdownSystem:
         return "ShutdownSystem";
     case Action::None:
@@ -83,23 +75,11 @@ void handleKey(uint8_t code)
         break;
     case Action::LightsToggle:
         cout << "  -> [TODO] lights_toggle()" << endl;
+        toggleLightsActivation();
         break;
     case Action::GateToggle:
         cout << "  ->  gate_toggle()" << endl;
         toggleGateActivation();
-        break;
-    case Action::HeatingToggle:
-        cout << "  -> [TODO] heating_toggle()" << endl;
-        break;
-    case Action::LightsUp:
-        cout << "  -> [TODO] lights_up()" << endl;
-        break;
-    case Action::LightsDown:
-        cout << "  -> [TODO] lights_down()" << endl;
-        break;
-    case Action::SirenToggle:
-        cout << "  ->  siren_toggle()" << endl;
-        toggleSiren();
         break;
     case Action::ShutdownSystem:
         cout << "  ->  shutdown_system()" << endl;

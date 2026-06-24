@@ -98,7 +98,7 @@ void webCommandHandler() {
             std::cout << "[C++] Alarm toggled via Web." << std::endl;
         } 
         else if (command == "toggleLights") {
-            // toggleHouseLights();
+            toggleLightsActivation();
             std::cout << "[C++] Lights toggled via Web." << std::endl;
         } 
         else if (command == "openGate") {

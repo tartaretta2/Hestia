@@ -28,6 +28,7 @@
 
 void toggleAlarmActivation();
 void toggleGateActivation();
+void toggleLightsActivation();
 void alarmMSListener();
 void lightsMSListener();
 void startLightsListener();

@@ -80,7 +80,6 @@ void initLightsLED(const char *gpioChip, const unsigned int ledPin)
     gpiod_request_config_free(requestConf);
 }
 
-
 void initTempLED(const char *gpioChip, const unsigned int ledPin)
 {
     cout << "Initializing Temperature LED on GPIO chip: " << gpioChip << ", pin: " << ledPin << endl;
@@ -161,6 +160,9 @@ void setLED(const unsigned int ledPin, bool on)
 
 void cleanupLEDs()
 {
+    setLED(ALARM_LED, false);
+    setLED(LIGHTS_LED, false);
+    setLED(TEMP_LED, false);
     if (alarm_req)
         gpiod_line_request_release(alarm_req);
     if (alarm_chip)

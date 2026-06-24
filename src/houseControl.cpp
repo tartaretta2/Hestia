@@ -204,14 +204,23 @@ void toggleGateActivation() {
     #endif
 }
 
+void toggleLightsActivation() {
+    
+    lightsOn = !lightsOn;
+    #ifdef SIM
+        simulateLED(lightsOn);
+    #else
+        setLED(LIGHTS_LED, lightsOn);
+    #endif
+    cout << (lightsOn ? "Lights ON" : "Lights OFF") << endl;
+}
+
 void shutdownSystem(){
     // Request main loop and all listeners to exit
     running = false;
 
     #ifndef SIM
     // Make sure siren is turned off first, then disable the alarm
-    setLED(ALARM_LED, false);
-    setLED(LIGHTS_LED, false);
     if (sirenOn) toggleSiren();
     if (alarmOn) toggleAlarmActivation();
 
@@ -235,9 +244,9 @@ void checkPlate(const string& plate) {
                 cout << "Disarm requested by recognized plate" << endl;
                 disarmRequested = true;
 
-                toggleGate(GATE_PIN);
+                toggleGateActivation();
                 this_thread::sleep_for(chrono::seconds(5));
-                toggleGate(GATE_PIN);
+                toggleGateActivation();
             }
             return;
         }
