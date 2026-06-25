@@ -35,3 +35,4 @@ void startLightsListener();
 void toggleSiren();
 void shutdownSystem();
 void checkPlate(const std::string& plate);
+void toggleLightsMode();

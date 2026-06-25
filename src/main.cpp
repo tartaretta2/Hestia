@@ -27,9 +27,12 @@ atomic<bool> running(true);    // main loop continues while true
 atomic<bool> lightsOn(false);  // true when the lights are on
 atomic<bool> gateOpen(false);   // true when the gate is open
 atomic<bool> lightsOnManually(false); // true when the lights are manually turned on (not by motion sensor)
+atomic<bool> armRequested(false); // true when the alarm system should be armed (set by remote or web command)
+atomic<bool> disarmRequested(false); // true when the alarm system should be disarmed (set by remote or web command)
+atomic<bool> manualMode(true);
 
-// AC threshold: turn the AC led on when temperature > 26C
-constexpr float AC_THRESHOLD_C = 26.0f;
+// AC threshold: turn the AC led on when temperature > 30C
+constexpr float AC_THRESHOLD_C = 31.0f;
 
 // Called by the IR receiver when a complete NEC frame is captured.
 // It decodes the frame and dispatches the resulting command.
@@ -84,6 +87,7 @@ void webCommandHandler() {
 
         if (command == "getState") {
             string stateReply = "ALARM:" + to_string(alarmOn ? 1 : 0) + 
+                "|MANUAL:" + to_string(manualMode ? 1 : 0) +
                 "|LIGHTS:" + to_string(lightsOn ? 1 : 0) +
                 "|GATE:" + to_string(gateOpen ? 1 : 0); 
             
@@ -94,25 +98,29 @@ void webCommandHandler() {
 
         cout << "[System] Received web command: [" << command << "]" << endl;
 
-        if (command == "toggleAlarm") {
+        if(command == "toggleAlarm") {
             cout << "[Alarm] Alarm toggled via Web." << endl;
-            toggleAlarmActivation(); 
-        } 
-        else if (command == "toggleLights") {
+            if (!alarmOn) {
+                armRequested = true; // Request to arm the alarm system
+            } else {
+                disarmRequested = true; // Request to disarm the alarm system
+            }
+        } else if(command == "toggleLights") {
             cout << "[Lights] Lights toggled via Web." << endl;
             toggleLightsActivation();
-        } 
-        else if (command == "openGate") {
+        } else if(command == "toggleGate") {
             cout << "[Gate] Gate toggled via Web." << endl;
             toggleGateActivation();
-        }
-        else if (command == "shutdownSystem") {
+        } else if(command == "shutdownSystem") {
             cout << "[System] Shutdown requested via Web." << endl;
-            running = false; // Signal the main loop to exit
-        }
-        else {
+            running = false; // Request main loop to exit
+        } else if (command =="toggleLightsMode") {
+            cout << "[Lights] Lights mode toggled via Web." << endl; 
+            toggleLightsMode();
+        } else {
             cout << "[System] Unknown command received: [" << command << "]" << endl;
         }
+
         // Acknowledge the received command to the web server
         string ack = "OK";
         sendto(server_fd, ack.c_str(), ack.length(), 0, (struct sockaddr*)&client_addr, client_len);
@@ -127,7 +135,7 @@ void temperatureMonitor()
     while (running) {
         float temp = 0.0f, hum = 0.0f;
         if (readDHT11(temp, hum)) {
-            cout << "[DHT11] Temp: " << temp << " C  |  Hum: " << hum << " %" << endl;
+            // cout << "[DHT11] Temp: " << temp << " C  |  Hum: " << hum << " %" << endl;
             bool shouldBeOn = (temp > AC_THRESHOLD_C);
             if (shouldBeOn && !acOn) {
                 // transition from cool to hot (turn the AC on)
@@ -154,19 +162,15 @@ void temperatureMonitor()
     }
 }
 
-extern atomic<bool> disarmRequested;
-
 int main() {
 #ifndef SIM
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
     initAlarmLED(GPIO_CHIP, ALARM_LED);
     initLightsLED(GPIO_CHIP, LIGHTS_LED);
-    initLightsMS(GPIO_CHIP, LIGHTS_MS);
     initTempLED(GPIO_CHIP, TEMP_LED);
     initIR(onRawFrame);
     initDHT11();   
     initGate(GPIO_CHIP, GATE_PIN);
-    startLightsListener();
 #endif
 
     thread tempThread(temperatureMonitor);
@@ -179,6 +183,11 @@ int main() {
 
     while (running) {
         
+        if (armRequested.exchange(false)) {
+            cout << "[Alarm] Alarm system arming requested." << endl;
+            toggleAlarmActivation();
+        }
+
         if (disarmRequested.exchange(false)) {
             if (alarmOn) toggleAlarmActivation();
         }

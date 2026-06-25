@@ -31,20 +31,25 @@ extern atomic<bool> running;
 extern atomic<bool> lightsOn;
 extern atomic<bool> gateOpen;
 extern atomic<bool> lightsOnManually;
+extern atomic<bool> disarmRequested; //flag set by plate recognition to request disarming the alarm system (checked in main loop)
+extern atomic<bool> armRequested; //flag set by web command to request arming the alarm system (checked in main loop)
+extern atomic<bool> manualMode;
 
 // Threads used for asynchronous tasks
 static thread alarmMSthread;   // thread that blocks on alarm motion-sensor edge events
 static thread lightsThread;    // thread that blocks on lights motion-sensor edge events
 static atomic<uint64_t> lightsOffToken(0); // token used to check if thread should turn off lights
-atomic<bool> disarmRequested(false); //flag set by plate recognition to request disarming the alarm system (checked in main loop)
 
 void toggleAlarmActivation() {
+    armRequested = false; // Reset the arm request flag
+    disarmRequested = false; // Reset the disarm request flag
+
     #ifdef SIM
         alarmOn = !alarmOn;
         cout << (alarmOn ? "Alarm ON" : "Alarm OFF") << endl;
     #else
     if (!alarmOn) {
-        cout << " [Alarm] You have 5 seconds to leave the house before the alarm system starts." << endl;
+        cout << "[Alarm] You have 5 seconds to leave the house before the alarm system starts." << endl;
 
         for (int i = 5; i > 0; --i) {
             cout << i << "... " << endl;
@@ -52,10 +57,10 @@ void toggleAlarmActivation() {
         }
         cout << endl;
         //Start the camera for plate recognition
-        initCameraSystem();
               
         this_thread::sleep_for(chrono::seconds(10)); // Additional wait to ensure motion sensor is stable low before starting the listener and avoid false triggers.
 
+        initCameraSystem();
         // Arm the alarm system: create the GPIO request and start the listener.
         if (!initAlarmMS(GPIO_CHIP, ALARM_MS)) {
             cerr << "Unable to arm alarm: motion sensor init failed." << endl;
@@ -68,6 +73,7 @@ void toggleAlarmActivation() {
         //     cout << "Motion already active, triggering siren immediately." << endl;
         //     toggleSiren();
         // }
+        alarmOn = true; 
 
         // Start the thread that blocks until a motion edge arrives.
         alarmMSthread = thread(alarmMSListener);
@@ -99,8 +105,6 @@ void toggleSiren() {
 }
 
 void alarmMSListener() {
-
-    alarmOn = true; 
     cout << "Alarm ON" << endl;
     
     // Block until an edge event is delivered by the kernel.
@@ -127,13 +131,14 @@ void alarmMSListener() {
 }
 
 void lightsMSListener(bool firstEntry) {
+
     cout << "Lights motion sensor listener started." << endl;
 
     // Listener loop: same pattern as alarm, but always running.
     // No condition like alarmOn; just loop while the program is running.
     while (running) {
         try {
-            if (lightsOnManually) continue; // Skip motion sensor control if lights are manually turned on
+            if(manualMode) return; // If manual mode is active, do not start the listener
 
         #ifdef SIM
             if (simulateMS()) {
@@ -149,8 +154,8 @@ void lightsMSListener(bool firstEntry) {
                     auto token = ++lightsOffToken;
                     thread([token]() {
                         this_thread::sleep_for(chrono::seconds(10));
-                        if (!running) return;
-                        if (lightsOnManually) return; // Skip motion sensor control if lights are manually turned on
+                        //if (!running) return;
+                        if (manualMode) return; // Skip motion sensor control if lights are manually turned on
                         if (token == lightsOffToken.load()) {
                             simulateLED(false);
                         }
@@ -183,7 +188,7 @@ void lightsMSListener(bool firstEntry) {
                     thread([token]() {
                         this_thread::sleep_for(chrono::seconds(3));
                         //if (!running) return;
-                        if (lightsOnManually) return; 
+                        if (manualMode) return; 
                         if (token == lightsOffToken.load()) {
                             setLED(LIGHTS_LED, false);
                         }
@@ -276,5 +281,18 @@ void checkPlate(const string& plate) {
     cout << "Unauthorized plate detected: " << plate << endl;
 }
 
+void toggleLightsMode(){
 
+    manualMode = (!manualMode);
+
+    #ifndef SIM
+    if (manualMode){
+        if (lightsThread.joinable()) lightsThread.join();
+        cleanupLightsMS();
+    }else{
+        initLightsMS(GPIO_CHIP, LIGHTS_MS);
+        startLightsListener();
+    }
+    #endif
+}
 

@@ -69,10 +69,13 @@ def home():
                 <button id="btnAlarm" onclick="sendCommand('toggleAlarm')" class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-4 rounded-xl transition">
                     🚨 Loading...
                 </button>
+                <button id="btnToggleLightMode" onclick="sendCommand('toggleLightsMode')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition">
+                    🔦 Loading...
+                </button>
                 <button id="btnLights" onclick="sendCommand('toggleLights')" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-4 rounded-xl transition">
                     💡 Loading...
                 </button>
-                <button id="btnGate" onclick="sendCommand('openGate')" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition">
+                <button id="btnGate" onclick="sendCommand('toggleGate')" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition">
                     🚪 Loading...
                 </button>
             </div>
@@ -102,7 +105,16 @@ def home():
                             statusDiv.className = "mt-6 p-2 text-sm text-center font-bold text-green-600";
                             
                             document.getElementById('btnAlarm').innerText = data.data.ALARM ? '🚨 Turn off alarm' : '🚨 Turn on alarm';
+                            document.getElementById('btnToggleLightMode').innerText = data.data.MANUAL ? '🔦 Switch to motion mode' : '🔦 Switch to manual mode';
                             document.getElementById('btnLights').innerText = data.data.LIGHTS ? '💡 Turn off lights' : '💡 Turn on lights';
+                            
+                            if(data.data.MANUAL) {
+                                document.getElementById('btnLights').className = "w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-4 rounded-xl transition";
+                                document.getElementById('btnLights').disabled = false;
+                            } else {
+                                document.getElementById('btnLights').className = "w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 px-4 rounded-xl transition disabled:opacity-50";
+                                document.getElementById('btnLights').disabled = true;
+                            }
                             document.getElementById('btnGate').innerText = data.data.GATE ? ' 🚪 Close gate' : ' 🚪 Open gate';
                         } else {
                             statusDiv.innerText = "🔴 Device offline";
