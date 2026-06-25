@@ -70,19 +70,19 @@ void handleKey(uint8_t code)
     switch (action)
     {
     case Action::AlarmToggle:
-        cout << "  ->  alarm_toggle()" << endl;
+        cout << "  ->  [Alarm] alarm_toggle()" << endl;
         toggleAlarmActivation();
         break;
     case Action::LightsToggle:
-        cout << "  -> [TODO] lights_toggle()" << endl;
+        cout << "  ->  [Lights] lights_toggle()" << endl;
         toggleLightsActivation();
         break;
     case Action::GateToggle:
-        cout << "  ->  gate_toggle()" << endl;
+        cout << "  ->  [Gate] gate_toggle()" << endl;
         toggleGateActivation();
         break;
     case Action::ShutdownSystem:
-        cout << "  ->  shutdown_system()" << endl;
+        cout << "  ->  [System] shutdown_system()" << endl;
         shutdownSystem();
         break;
     default:

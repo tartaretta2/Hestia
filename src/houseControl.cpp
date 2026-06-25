@@ -30,6 +30,7 @@ extern atomic<bool> alarmOn;
 extern atomic<bool> running;
 extern atomic<bool> lightsOn;
 extern atomic<bool> gateOpen;
+extern atomic<bool> lightsOnManually;
 
 // Threads used for asynchronous tasks
 static thread alarmMSthread;   // thread that blocks on alarm motion-sensor edge events
@@ -111,7 +112,7 @@ void alarmMSListener() {
             if (readAlarmMS())
 #endif
             {
-                if (isAlarmMSActive() && !sirenOn) {
+                if (!sirenOn) {
                     cout << "Motion detected! Triggering siren." << endl;
                     toggleSiren();
                 }
@@ -131,7 +132,9 @@ void lightsMSListener() {
     // No condition like alarmOn; just loop while the program is running.
     while (running) {
         try {
-#ifdef SIM
+            if (lightsOnManually) continue; // Skip motion sensor control if lights are manually turned on
+
+        #ifdef SIM
             if (simulateMS()) {
                 if (!lightsOn) {
                     simulateLED(true);
@@ -146,6 +149,7 @@ void lightsMSListener() {
                     thread([token]() {
                         this_thread::sleep_for(chrono::seconds(10));
                         if (!running) return;
+                        if (lightsOnManually) return; // Skip motion sensor control if lights are manually turned on
                         if (token == lightsOffToken.load()) {
                             simulateLED(false);
                         }
@@ -156,7 +160,9 @@ void lightsMSListener() {
             }
             this_thread::sleep_for(chrono::seconds(2)); // SIM: poll every 2 sec
 #else
+
             int edge = readLightsMS();
+
             if (edge > 0) {
                 // Rising edge: motion detected
                 if (!lightsOn) {
@@ -172,6 +178,7 @@ void lightsMSListener() {
                     thread([token]() {
                         this_thread::sleep_for(chrono::seconds(3));
                         if (!running) return;
+                        if (lightsOnManually) return; 
                         if (token == lightsOffToken.load()) {
                             setLED(LIGHTS_LED, false);
                         }
@@ -214,6 +221,8 @@ void toggleGateActivation() {
 void toggleLightsActivation() {
     
     lightsOn = !lightsOn;
+    lightsOnManually = lightsOn.load(); // Update manual control flag
+
     #ifdef SIM
         simulateLED(lightsOn);
     #else

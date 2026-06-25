@@ -26,6 +26,7 @@ atomic<bool> alarmOn(false);   // true when the alarm system is armed
 atomic<bool> running(true);    // main loop continues while true
 atomic<bool> lightsOn(false);  // true when the lights are on
 atomic<bool> gateOpen(false);   // true when the gate is open
+atomic<bool> lightsOnManually(false); // true when the lights are manually turned on (not by motion sensor)
 
 // AC threshold: turn the AC led on when temperature > 26C
 constexpr float AC_THRESHOLD_C = 26.0f;
@@ -68,7 +69,7 @@ void webCommandHandler() {
     sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
 
-    cout << "[C++] Web command thread ready on port 12345..." << std::endl;
+    cout << "[System] Web command thread ready on port 12345..." << std::endl;
 
     while (running) { 
         memset(buffer, 0, sizeof(buffer));
@@ -91,26 +92,26 @@ void webCommandHandler() {
             continue; 
         }
 
-        cout << "[C++] Received web command: [" << command << "]" << endl;
+        cout << "[System] Received web command: [" << command << "]" << endl;
 
         if (command == "toggleAlarm") {
             toggleAlarmActivation(); 
-            cout << "[C++] Alarm toggled via Web." << endl;
+            cout << "[Alarm] Alarm toggled via Web." << endl;
         } 
         else if (command == "toggleLights") {
             toggleLightsActivation();
-            cout << "[C++] Lights toggled via Web." << endl;
+            cout << "[Lights] Lights toggled via Web." << endl;
         } 
         else if (command == "openGate") {
             toggleGateActivation();
-            cout << "[C++] Gate toggled via Web." << endl;
+            cout << "[Gate] Gate toggled via Web." << endl;
         }
         else if (command == "shutdownSystem") {
             shutdownSystem();
-            cout << "[C++] System shutdown requested via Web." << endl;
+            cout << "[System] System shutdown requested via Web." << endl;
         }
         else {
-            cout << "[C++] Unknown command received: [" << command << "]" << endl;
+            cout << "[System] Unknown command received: [" << command << "]" << endl;
         }
         // Acknowledge the received command to the web server
         string ack = "OK";
@@ -126,11 +127,11 @@ void temperatureMonitor()
     while (running) {
         float temp = 0.0f, hum = 0.0f;
         if (readDHT11(temp, hum)) {
-            cout << "[DHT11] Temp: " << temp << " C  |  Humidity: " << hum << " %" << endl;
+            cout << "[DHT11] Temp: " << temp << " C  |  Hum: " << hum << " %" << endl;
             bool shouldBeOn = (temp > AC_THRESHOLD_C);
             if (shouldBeOn && !acOn) {
                 // transition from cool to hot (turn the AC on)
-                cout << "[AC] ON (hot detected)" << endl;
+                cout << "[AC] turned ON (hot detected: " << temp << " C - " << hum << " %)" << endl;
                 #ifndef SIM
                     setLED(TEMP_LED, true);
                 #else
@@ -138,7 +139,7 @@ void temperatureMonitor()
                 #endif
             } else if (!shouldBeOn && acOn) {
                 // transition from hot to cool (turn the AC off)
-                cout << "[AC] OFF (cool again)" << endl;
+                cout << "[AC] turned OFF (cool again: " << temp << " C - " << hum << " %)" << endl;
                 #ifndef SIM
                     setLED(TEMP_LED, false);
                 #else
