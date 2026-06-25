@@ -30,10 +30,11 @@ extern atomic<bool> alarmOn;
 extern atomic<bool> running;
 extern atomic<bool> lightsOn;
 extern atomic<bool> gateOpen;
-extern atomic<bool> lightsOnManually;
 extern atomic<bool> disarmRequested; //flag set by plate recognition to request disarming the alarm system (checked in main loop)
 extern atomic<bool> armRequested; //flag set by web command to request arming the alarm system (checked in main loop)
-extern atomic<bool> manualMode;
+extern atomic<bool> lightsManualMode;
+extern atomic<bool> acManualMode; // true when the AC is in manual mode (set by web command)
+extern atomic<bool> acOn; // true when the AC is on (set by temperature monitor thread)
 
 // Threads used for asynchronous tasks
 static thread alarmMSthread;   // thread that blocks on alarm motion-sensor edge events
@@ -138,7 +139,7 @@ void lightsMSListener(bool firstEntry) {
     // No condition like alarmOn; just loop while the program is running.
     while (running) {
         try {
-            if(manualMode) return; // If manual mode is active, do not start the listener
+            if(lightsManualMode) return; // If manual mode is active, do not start the listener
 
         #ifdef SIM
             if (simulateMS()) {
@@ -155,7 +156,7 @@ void lightsMSListener(bool firstEntry) {
                     thread([token]() {
                         this_thread::sleep_for(chrono::seconds(10));
                         //if (!running) return;
-                        if (manualMode) return; // Skip motion sensor control if lights are manually turned on
+                        if (lightsManualMode) return; // Skip motion sensor control if lights are manually turned on
                         if (token == lightsOffToken.load()) {
                             simulateLED(false);
                         }
@@ -188,7 +189,7 @@ void lightsMSListener(bool firstEntry) {
                     thread([token]() {
                         this_thread::sleep_for(chrono::seconds(3));
                         //if (!running) return;
-                        if (manualMode) return; 
+                        if (lightsManualMode) return; 
                         if (token == lightsOffToken.load()) {
                             setLED(LIGHTS_LED, false);
                         }
@@ -229,7 +230,6 @@ void toggleGateActivation() {
 void toggleLightsActivation() {
     
     lightsOn = !lightsOn;
-    lightsOnManually = lightsOn.load(); // Update manual control flag
 
     #ifdef SIM
         simulateLED(lightsOn);
@@ -283,10 +283,11 @@ void checkPlate(const string& plate) {
 
 void toggleLightsMode(){
 
-    manualMode = (!manualMode);
+    lightsManualMode = (!lightsManualMode);
+    cout << "[Lights] Lights mode is now " << (lightsManualMode ? "MANUAL" : "AUTO") << endl;
 
     #ifndef SIM
-    if (manualMode){
+    if (lightsManualMode){
         if (lightsThread.joinable()) lightsThread.join();
         cleanupLightsMS();
     }else{
@@ -296,3 +297,21 @@ void toggleLightsMode(){
     #endif
 }
 
+void toggleACMode() {
+    acManualMode = !acManualMode;
+    cout << "[AC] AC mode is now " << (acManualMode ? "MANUAL" : "AUTO") << endl;
+}
+
+void toggleAC() {
+    if (acManualMode) {
+        acOn = !acOn;
+        cout << "[AC] AC is now " << (acOn ? "ON" : "OFF") << endl;
+        #ifndef SIM
+            setLED(TEMP_LED, acOn);
+        #else
+            simulateLED(acOn);
+        #endif
+    } else {
+        cout << "[AC] Cannot toggle AC in AUTO mode. Please switch to MANUAL mode first." << endl;
+    }
+}

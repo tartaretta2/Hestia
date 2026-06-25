@@ -14,7 +14,7 @@ static const Key KEYS[] = {
     { KEY_VOL_DOWN,   "VOL-",       Action::None            },
     { KEY_1,          "1",          Action::LightsToggle    },
     { KEY_2,          "2",          Action::GateToggle      },
-    { KEY_3,          "3",          Action::None            },
+    { KEY_3,          "3",          Action::ToggleACMode    },
     { KEY_FUNC_STOP,  "FUNC/STOP",  Action::ToggleLightsMode},
     { KEY_REWIND,     "<<",         Action::None            },
     { KEY_PLAY_PAUSE, "PLAY/PAUSE", Action::AlarmToggle     },
@@ -24,7 +24,7 @@ static const Key KEYS[] = {
     { KEY_EQ,         "EQ",         Action::None            },
     { KEY_ST_REPT,    "ST/REPT",    Action::None            },
     { KEY_0,          "0",          Action::None            },
-    { KEY_4,          "4",          Action::None            },
+    { KEY_4,          "4",          Action::ToggleAC        },
     { KEY_5,          "5",          Action::None            },
     { KEY_6,          "6",          Action::None            },
     { KEY_7,          "7",          Action::None            },
@@ -54,6 +54,10 @@ const char *actionName(Action action)
         return "ShutdownSystem";
     case Action::ToggleLightsMode:
         return "ToggleLightsMode";
+    case Action::ToggleACMode:
+        return "ToggleACMode";
+    case Action::ToggleAC:
+        return "ToggleAC";
     case Action::None:
         return "None";
     default:
@@ -88,6 +92,14 @@ void handleKey(uint8_t code)
     case Action::ToggleLightsMode:
         cout << "  ->  [Lights] toggle_lights_mode()" << endl;
         toggleLightsMode();
+        break;
+    case Action::ToggleACMode:
+        cout << "  ->  [AC] toggle_ac_mode()" << endl;
+        toggleACMode();
+        break;
+    case Action::ToggleAC:
+        cout << "  ->  [AC] toggle_ac()" << endl;
+        toggleAC();
         break;
     case Action::ShutdownSystem:
         cout << "  ->  [System] shutdown_system()" << endl;

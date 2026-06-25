@@ -26,10 +26,11 @@ atomic<bool> alarmOn(false);   // true when the alarm system is armed
 atomic<bool> running(true);    // main loop continues while true
 atomic<bool> lightsOn(false);  // true when the lights are on
 atomic<bool> gateOpen(false);   // true when the gate is open
-atomic<bool> lightsOnManually(false); // true when the lights are manually turned on (not by motion sensor)
 atomic<bool> armRequested(false); // true when the alarm system should be armed (set by remote or web command)
 atomic<bool> disarmRequested(false); // true when the alarm system should be disarmed (set by remote or web command)
-atomic<bool> manualMode(true);
+atomic<bool> lightsManualMode(true);
+atomic<bool> acManualMode(false); // true when the AC is in manual mode (set by web command)
+atomic<bool> acOn(false); // true when the AC is on (set by temperature monitor thread)
 
 // AC threshold: turn the AC led on when temperature > 30C
 constexpr float AC_THRESHOLD_C = 31.0f;
@@ -87,10 +88,12 @@ void webCommandHandler() {
 
         if (command == "getState") {
             string stateReply = "ALARM:" + to_string(alarmOn ? 1 : 0) + 
-                "|MANUAL:" + to_string(manualMode ? 1 : 0) +
+                "|LMODE:" + to_string(lightsManualMode ? 1 : 0) +
                 "|LIGHTS:" + to_string(lightsOn ? 1 : 0) +
-                "|GATE:" + to_string(gateOpen ? 1 : 0); 
-            
+                "|GATE:" + to_string(gateOpen ? 1 : 0) +
+                "|ACMODE:" + to_string(acManualMode ? 1 : 0) + 
+                "|AC:" + to_string(acOn ? 1 : 0);
+
             // Respond with the current state of the system (alarm and lights)
             sendto(server_fd, stateReply.c_str(), stateReply.length(), 0, (struct sockaddr*)&client_addr, client_len);
             continue; 
@@ -117,6 +120,12 @@ void webCommandHandler() {
         } else if (command =="toggleLightsMode") {
             cout << "[Lights] Lights mode toggled via Web." << endl; 
             toggleLightsMode();
+        } else if (command =="toggleACMode") {
+            cout << "[AC] AC mode toggled via Web." << endl; 
+            toggleACMode();
+        } else if (command =="toggleAC") {
+            cout << "[AC] AC toggled via Web." << endl;
+            toggleAC();
         } else {
             cout << "[System] Unknown command received: [" << command << "]" << endl;
         }
@@ -131,30 +140,25 @@ void webCommandHandler() {
 // Reads DHT11 periodically and triggers the AC LED when above threshold
 void temperatureMonitor()
 {
-    bool acOn = false;
     while (running) {
         float temp = 0.0f, hum = 0.0f;
         if (readDHT11(temp, hum)) {
+            if(acManualMode) {
+                // In manual mode, the AC is controlled by the user, so we don't automatically turn it on/off
+                this_thread::sleep_for(chrono::seconds(3));
+                continue;
+            }
             // cout << "[DHT11] Temp: " << temp << " C  |  Hum: " << hum << " %" << endl;
             bool shouldBeOn = (temp > AC_THRESHOLD_C);
             if (shouldBeOn && !acOn) {
                 // transition from cool to hot (turn the AC on)
-                cout << "[AC] turned ON (hot detected: " << temp << " C - " << hum << " %)" << endl;
-                #ifndef SIM
-                    setLED(TEMP_LED, true);
-                #else
-                    simulateLED(true);
-                #endif
+                cout << "[AC] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
+                toggleAC();
             } else if (!shouldBeOn && acOn) {
                 // transition from hot to cool (turn the AC off)
-                cout << "[AC] turned OFF (cool again: " << temp << " C - " << hum << " %)" << endl;
-                #ifndef SIM
-                    setLED(TEMP_LED, false);
-                #else
-                    simulateLED(false);
-                #endif
+                cout << "[AC] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
+                toggleAC();
             }
-            acOn = shouldBeOn;
         } else {
             cout << "[DHT11] Read failed." << endl;
         }

@@ -75,6 +75,12 @@ def home():
                 <button id="btnLights" onclick="sendCommand('toggleLights')" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-4 rounded-xl transition">
                     💡 Loading...
                 </button>
+                <button id="btnToggleACMode" onclick="sendCommand('toggleACMode')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition">
+                    ❄️ Loading...
+                </button>
+                <button id="btnAC" onclick="sendCommand('toggleAC')" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl transition">
+                    ❄️ Loading...
+                </button>
                 <button id="btnGate" onclick="sendCommand('toggleGate')" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition">
                     🚪 Loading...
                 </button>
@@ -105,16 +111,27 @@ def home():
                             statusDiv.className = "mt-6 p-2 text-sm text-center font-bold text-green-600";
                             
                             document.getElementById('btnAlarm').innerText = data.data.ALARM ? '🚨 Turn off alarm' : '🚨 Turn on alarm';
-                            document.getElementById('btnToggleLightMode').innerText = data.data.MANUAL ? '🔦 Switch to motion mode' : '🔦 Switch to manual mode';
-                            document.getElementById('btnLights').innerText = data.data.LIGHTS ? '💡 Turn off lights' : '💡 Turn on lights';
                             
-                            if(data.data.MANUAL) {
+                            document.getElementById('btnToggleLightMode').innerText = data.data.LMODE ? '🔦 Switch to motion mode' : '🔦 Switch to manual mode'; 
+                            document.getElementById('btnLights').innerText = data.data.LIGHTS ? '💡 Turn off lights' : '💡 Turn on lights';  
+                            if(data.data.LMODE) {
                                 document.getElementById('btnLights').className = "w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 px-4 rounded-xl transition";
                                 document.getElementById('btnLights').disabled = false;
                             } else {
                                 document.getElementById('btnLights').className = "w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 px-4 rounded-xl transition disabled:opacity-50";
                                 document.getElementById('btnLights').disabled = true;
                             }
+
+                            document.getElementById('btnToggleACMode').innerText = data.data.ACMODE ? '❄️ Switch to auto AC' : '❄️ Switch to manual AC';
+                            document.getElementById('btnAC').innerText = data.data.ACMODE ? '❄️ Turn off AC' : '❄️ Turn on AC';
+                            if(data.data.ACMODE) {
+                                document.getElementById('btnAC').className = "w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl transition";
+                                document.getElementById('btnAC').disabled = false;
+                            } else {
+                                document.getElementById('btnAC').className = "w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 px-4 rounded-xl transition disabled:opacity-50";
+                                document.getElementById('btnAC').disabled = true;
+                            }
+
                             document.getElementById('btnGate').innerText = data.data.GATE ? ' 🚪 Close gate' : ' 🚪 Open gate';
                         } else {
                             statusDiv.innerText = "🔴 Device offline";

@@ -33,6 +33,8 @@ enum class Action {
     LightsToggle,    // 1     -> lights on/off
     GateToggle,      // 2     -> gate open/close
     ToggleLightsMode, // FUNC/STOP -> toggle lights mode (manual / motion sensor)
+    ToggleACMode,    // 3     -> toggle AC mode (manual / automatic)
+    ToggleAC,        // 4     -> toggle AC on/off (only in manual mode
     ShutdownSystem,   // POWER -> shutdown system
     Unknown
 };
