@@ -95,20 +95,20 @@ void webCommandHandler() {
         cout << "[System] Received web command: [" << command << "]" << endl;
 
         if (command == "toggleAlarm") {
-            toggleAlarmActivation(); 
             cout << "[Alarm] Alarm toggled via Web." << endl;
+            toggleAlarmActivation(); 
         } 
         else if (command == "toggleLights") {
-            toggleLightsActivation();
             cout << "[Lights] Lights toggled via Web." << endl;
+            toggleLightsActivation();
         } 
         else if (command == "openGate") {
-            toggleGateActivation();
             cout << "[Gate] Gate toggled via Web." << endl;
+            toggleGateActivation();
         }
         else if (command == "shutdownSystem") {
-            shutdownSystem();
-            cout << "[System] System shutdown requested via Web." << endl;
+            cout << "[System] Shutdown requested via Web." << endl;
+            running = false; // Signal the main loop to exit
         }
         else {
             cout << "[System] Unknown command received: [" << command << "]" << endl;

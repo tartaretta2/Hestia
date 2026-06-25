@@ -44,20 +44,22 @@ void toggleAlarmActivation() {
         cout << (alarmOn ? "Alarm ON" : "Alarm OFF") << endl;
     #else
     if (!alarmOn) {
+        cout << " [Alarm] You have 5 seconds to leave the house before the alarm system starts." << endl;
+
+        for (int i = 5; i > 0; --i) {
+            cout << i << "... " << endl;
+            this_thread::sleep_for(chrono::seconds(1));
+        }
+        cout << endl;
+        //Start the camera for plate recognition
+        initCameraSystem();
+              
+        this_thread::sleep_for(chrono::seconds(10)); // Additional wait to ensure motion sensor is stable low before starting the listener and avoid false triggers.
+
         // Arm the alarm system: create the GPIO request and start the listener.
         if (!initAlarmMS(GPIO_CHIP, ALARM_MS)) {
             cerr << "Unable to arm alarm: motion sensor init failed." << endl;
             return;
-        }
-
-        alarmOn = true;
-        cout << "Alarm ON" << endl;
-
-        cout << "You have 10 seconds to leave the house before the motion sensor triggers." << endl;
-
-        for (int i = 10; i > 0; --i) {
-            cout << i << "..." << endl;
-            this_thread::sleep_for(chrono::seconds(1));
         }
 
         // If the PIR is already active when arming, trigger immediately so
@@ -66,10 +68,6 @@ void toggleAlarmActivation() {
         //     cout << "Motion already active, triggering siren immediately." << endl;
         //     toggleSiren();
         // }
-
-
-        //Start the camera for plate recognition
-        initCameraSystem();
 
         // Start the thread that blocks until a motion edge arrives.
         alarmMSthread = thread(alarmMSListener);
@@ -102,6 +100,9 @@ void toggleSiren() {
 
 void alarmMSListener() {
 
+    alarmOn = true; 
+    cout << "Alarm ON" << endl;
+    
     // Block until an edge event is delivered by the kernel.
     // No polling loop is used here.
     while (alarmOn) {
@@ -125,7 +126,7 @@ void alarmMSListener() {
     cout << "Motion Sensor Listener stopped." << endl;
 }
 
-void lightsMSListener() {
+void lightsMSListener(bool firstEntry) {
     cout << "Lights motion sensor listener started." << endl;
 
     // Listener loop: same pattern as alarm, but always running.
@@ -160,6 +161,10 @@ void lightsMSListener() {
             }
             this_thread::sleep_for(chrono::seconds(2)); // SIM: poll every 2 sec
 #else
+            if (firstEntry) {
+                this_thread::sleep_for(chrono::seconds(3)); // Wait a bit before starting to avoid false triggers on startup
+                firstEntry = false;
+            }
 
             int edge = readLightsMS();
 
@@ -177,7 +182,7 @@ void lightsMSListener() {
                     auto token = ++lightsOffToken;
                     thread([token]() {
                         this_thread::sleep_for(chrono::seconds(3));
-                        if (!running) return;
+                        //if (!running) return;
                         if (lightsOnManually) return; 
                         if (token == lightsOffToken.load()) {
                             setLED(LIGHTS_LED, false);
@@ -200,14 +205,12 @@ void lightsMSListener() {
     }
     #endif
 
-    // Wait for all listener threads to cleanly exit
-    if (lightsThread.joinable()) lightsThread.join();
     cout << "Lights motion sensor listener stopped." << endl;
 }
 
 void startLightsListener() {
     if (lightsThread.joinable()) return; // already running
-    lightsThread = thread(lightsMSListener);
+    lightsThread = thread(lightsMSListener, true);
 }
 
 void toggleGateActivation() {
@@ -235,18 +238,21 @@ void shutdownSystem(){
     // Request main loop and all listeners to exit
     running = false;
 
+    // Wait for all listener threads to cleanly exit
+    if (lightsThread.joinable()) lightsThread.join();
+
     #ifndef SIM
     // Make sure siren is turned off first, then disable the alarm
     if (sirenOn) toggleSiren();
     if (alarmOn) toggleAlarmActivation();
 
-    cleanupIR();
-    cleanupBuzzer(BUZZER_PIN);
     cleanupLEDs();
-    cleanupAlarmMS();
-    cleanupLightsMS();
+    cleanupBuzzer(BUZZER_PIN);
     cleanupGate(GATE_PIN);
     dht11_api::cleanupDHT11();
+    cleanupIR();
+    cleanupAlarmMS();
+    cleanupLightsMS();
     #endif
 }
 

@@ -30,7 +30,7 @@ void toggleAlarmActivation();
 void toggleGateActivation();
 void toggleLightsActivation();
 void alarmMSListener();
-void lightsMSListener();
+void lightsMSListener(bool firstEntry = true);
 void startLightsListener();
 void toggleSiren();
 void shutdownSystem();
