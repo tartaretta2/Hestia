@@ -303,15 +303,11 @@ void toggleACMode() {
 }
 
 void toggleAC() {
-    if (acManualMode) {
-        acOn = !acOn;
-        cout << "[AC] AC is now " << (acOn ? "ON" : "OFF") << endl;
-        #ifndef SIM
-            setLED(TEMP_LED, acOn);
-        #else
-            simulateLED(acOn);
-        #endif
-    } else {
-        cout << "[AC] Cannot toggle AC in AUTO mode. Please switch to MANUAL mode first." << endl;
-    }
+    acOn = !acOn;
+    cout << "[AC] AC is now " << (acOn ? "ON" : "OFF") << endl;
+    #ifndef SIM
+        setLED(TEMP_LED, acOn);
+    #else
+        simulateLED(acOn);
+    #endif
 }

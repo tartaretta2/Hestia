@@ -123,7 +123,7 @@ def home():
                             }
 
                             document.getElementById('btnToggleACMode').innerText = data.data.ACMODE ? '❄️ Switch to auto AC' : '❄️ Switch to manual AC';
-                            document.getElementById('btnAC').innerText = data.data.ACMODE ? '❄️ Turn off AC' : '❄️ Turn on AC';
+                            document.getElementById('btnAC').innerText = data.data.AC ? '❄️ Turn off AC' : '❄️ Turn on AC';
                             if(data.data.ACMODE) {
                                 document.getElementById('btnAC').className = "w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl transition";
                                 document.getElementById('btnAC').disabled = false;
