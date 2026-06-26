@@ -81,6 +81,12 @@ def home():
                 <button id="btnAC" onclick="sendCommand('toggleAC')" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-xl transition">
                     ❄️ Loading...
                 </button>
+                <button id="btnToggleHeatingMode" onclick="sendCommand('toggleHeatingMode')" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-xl transition">
+                    🔥 Loading...
+                </button>
+                <button id="btnHeating" onclick="sendCommand('toggleHeating')" class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-xl transition">
+                    🔥 Loading...
+                </button>
                 <button id="btnGate" onclick="sendCommand('toggleGate')" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-xl transition">
                     🚪 Loading...
                 </button>
@@ -130,6 +136,16 @@ def home():
                             } else {
                                 document.getElementById('btnAC').className = "w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 px-4 rounded-xl transition disabled:opacity-50";
                                 document.getElementById('btnAC').disabled = true;
+                            }
+
+                            document.getElementById('btnToggleHeatingMode').innerText = data.data.HEATINGMODE ? '🔥 Switch to auto Heating' : '🔥 Switch to manual Heating';
+                            document.getElementById('btnHeating').innerText = data.data.HEATING ? '🔥 Turn off Heating' : '🔥 Turn on Heating';
+                            if(data.data.HEATINGMODE) {
+                                document.getElementById('btnHeating').className = "w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-xl transition";
+                                document.getElementById('btnHeating').disabled = false;
+                            } else {
+                                document.getElementById('btnHeating').className = "w-full bg-gray-400 hover:bg-gray-500 text-white font-semibold py-3 px-4 rounded-xl transition disabled:opacity-50";
+                                document.getElementById('btnHeating').disabled = true;
                             }
 
                             document.getElementById('btnGate').innerText = data.data.GATE ? ' 🚪 Close gate' : ' 🚪 Open gate';

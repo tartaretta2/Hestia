@@ -35,6 +35,8 @@ enum class Action {
     ToggleLightsMode, // FUNC/STOP -> toggle lights mode (manual / motion sensor)
     ToggleACMode,    // 3     -> toggle AC mode (manual / automatic)
     ToggleAC,        // 4     -> toggle AC on/off (only in manual mode
+    ToggleHeatingMode,    // 0     -> toggle Heating mode (manual / automatic)
+    ToggleHeating,        // 5     -> toggle Heating on/off (only in manual mode
     ShutdownSystem,   // POWER -> shutdown system
     Unknown
 };

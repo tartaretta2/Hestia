@@ -34,7 +34,9 @@ extern atomic<bool> disarmRequested; //flag set by plate recognition to request 
 extern atomic<bool> armRequested; //flag set by web command to request arming the alarm system (checked in main loop)
 extern atomic<bool> lightsManualMode;
 extern atomic<bool> acManualMode; // true when the AC is in manual mode (set by web command)
+extern atomic<bool> heatingManualMode; // true when the heating is in manual mode (set by web command)
 extern atomic<bool> acOn; // true when the AC is on (set by temperature monitor thread)
+extern atomic<bool> heatingOn; // true when the Heating is on (set by temperature monitor thread)
 
 // Threads used for asynchronous tasks
 static thread alarmMSthread;   // thread that blocks on alarm motion-sensor edge events
@@ -272,7 +274,7 @@ void checkPlate(const string& plate) {
                 disarmRequested = true;
 
                 toggleGateActivation();
-                this_thread::sleep_for(chrono::seconds(5));
+                this_thread::sleep_for(chrono::seconds(10));
                 toggleGateActivation();
             }
             return;
@@ -302,12 +304,27 @@ void toggleACMode() {
     cout << "[AC] AC mode is now " << (acManualMode ? "MANUAL" : "AUTO") << endl;
 }
 
+void toggleHeatingMode() {
+    heatingManualMode = !heatingManualMode;
+    cout << "[HEATING] Heating mode is now " << (heatingManualMode ? "MANUAL" : "AUTO") << endl;
+}
+
 void toggleAC() {
     acOn = !acOn;
     cout << "[AC] AC is now " << (acOn ? "ON" : "OFF") << endl;
     #ifndef SIM
-        setLED(TEMP_LED, acOn);
+        setLED(AC_LED, acOn);
     #else
         simulateLED(acOn);
+    #endif
+}
+
+void toggleHeating() {
+    heatingOn = !heatingOn;
+    cout << "[HEATING] Heating is now " << (heatingOn ? "ON" : "OFF") << endl;
+    #ifndef SIM
+        setLED(HEATING_LED, heatingOn);
+    #else
+        simulateLED(heatingOn);
     #endif
 }

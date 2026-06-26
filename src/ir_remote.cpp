@@ -9,27 +9,27 @@ extern atomic<bool> running; // Shared state variable defined in main.cpp
 // Key mapping for the remote control buttons
 // Key - Name - Action
 static const Key KEYS[] = {
-    { KEY_POWER,      "POWER",      Action::ShutdownSystem  },
-    { KEY_VOL_UP,     "VOL+",       Action::None            },
-    { KEY_VOL_DOWN,   "VOL-",       Action::None            },
-    { KEY_1,          "1",          Action::LightsToggle    },
-    { KEY_2,          "2",          Action::GateToggle      },
-    { KEY_3,          "3",          Action::ToggleACMode    },
-    { KEY_FUNC_STOP,  "FUNC/STOP",  Action::ToggleLightsMode},
-    { KEY_REWIND,     "<<",         Action::None            },
-    { KEY_PLAY_PAUSE, "PLAY/PAUSE", Action::AlarmToggle     },
-    { KEY_FAST_FWD,   ">>",         Action::None            },
-    { KEY_DOWN,       "DOWN",       Action::None            },
-    { KEY_UP,         "UP",         Action::None            },
-    { KEY_EQ,         "EQ",         Action::None            },
-    { KEY_ST_REPT,    "ST/REPT",    Action::None            },
-    { KEY_0,          "0",          Action::None            },
-    { KEY_4,          "4",          Action::ToggleAC        },
-    { KEY_5,          "5",          Action::None            },
-    { KEY_6,          "6",          Action::None            },
-    { KEY_7,          "7",          Action::None            },
-    { KEY_8,          "8",          Action::None            },
-    { KEY_9,          "9",          Action::None            },
+    { KEY_POWER,      "POWER",      Action::ShutdownSystem   },
+    { KEY_VOL_UP,     "VOL+",       Action::None             },
+    { KEY_VOL_DOWN,   "VOL-",       Action::None             },
+    { KEY_1,          "1",          Action::LightsToggle     },
+    { KEY_2,          "2",          Action::GateToggle       },
+    { KEY_3,          "3",          Action::ToggleACMode     },
+    { KEY_FUNC_STOP,  "FUNC/STOP",  Action::ToggleLightsMode },
+    { KEY_REWIND,     "<<",         Action::None             },
+    { KEY_PLAY_PAUSE, "PLAY/PAUSE", Action::AlarmToggle      },
+    { KEY_FAST_FWD,   ">>",         Action::None             },
+    { KEY_DOWN,       "DOWN",       Action::None             },
+    { KEY_UP,         "UP",         Action::None             },
+    { KEY_EQ,         "EQ",         Action::None             },
+    { KEY_ST_REPT,    "ST/REPT",    Action::None             },
+    { KEY_0,          "0",          Action::ToggleHeatingMode},
+    { KEY_4,          "4",          Action::ToggleAC         },
+    { KEY_5,          "5",          Action::ToggleHeating    },
+    { KEY_6,          "6",          Action::None             },
+    { KEY_7,          "7",          Action::None             },
+    { KEY_8,          "8",          Action::None             },
+    { KEY_9,          "9",          Action::None             },
 };
 
 const Key *lookupKey(uint8_t code)
@@ -58,6 +58,10 @@ const char *actionName(Action action)
         return "ToggleACMode";
     case Action::ToggleAC:
         return "ToggleAC";
+    case Action::ToggleHeatingMode:
+        return "ToggleHeatingMode";
+    case Action::ToggleHeating:
+        return "ToggleHeating";
     case Action::None:
         return "None";
     default:
@@ -100,6 +104,14 @@ void handleKey(uint8_t code)
     case Action::ToggleAC:
         cout << "  ->  [AC] toggle_ac()" << endl;
         toggleAC();
+        break;
+    case Action::ToggleHeatingMode:
+        cout << "  ->  [HEATING] toggle_heating_mode()" << endl;
+        toggleHeatingMode();
+        break;
+    case Action::ToggleHeating:
+        cout << "  ->  [HEATING] toggle_heating()" << endl;
+        toggleHeating();
         break;
     case Action::ShutdownSystem:
         cout << "  ->  [System] shutdown_system()" << endl;

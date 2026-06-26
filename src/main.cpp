@@ -30,10 +30,13 @@ atomic<bool> armRequested(false); // true when the alarm system should be armed 
 atomic<bool> disarmRequested(false); // true when the alarm system should be disarmed (set by remote or web command)
 atomic<bool> lightsManualMode(true);
 atomic<bool> acManualMode(false); // true when the AC is in manual mode (set by web command)
+atomic<bool> heatingManualMode(false); // true when the heating is in manual mode (set by web command)
 atomic<bool> acOn(false); // true when the AC is on (set by temperature monitor thread)
+atomic<bool> heatingOn(false); // true when the heating is on (set by temperature monitor thread)
 
 // AC threshold: turn the AC led on when temperature > 30C
 constexpr float AC_THRESHOLD_C = 31.0f;
+constexpr float HEATING_THRESHOLD_C = 30.0f;
 
 // Called by the IR receiver when a complete NEC frame is captured.
 // It decodes the frame and dispatches the resulting command.
@@ -92,7 +95,9 @@ void webCommandHandler() {
                 "|LIGHTS:" + to_string(lightsOn ? 1 : 0) +
                 "|GATE:" + to_string(gateOpen ? 1 : 0) +
                 "|ACMODE:" + to_string(acManualMode ? 1 : 0) + 
-                "|AC:" + to_string(acOn ? 1 : 0);
+                "|AC:" + to_string(acOn ? 1 : 0) +
+                "|HEATINGMODE:" + to_string(heatingManualMode ? 1 : 0) + 
+                "|HEATING:" + to_string(heatingOn ? 1 : 0);
 
             // Respond with the current state of the system (alarm and lights)
             sendto(server_fd, stateReply.c_str(), stateReply.length(), 0, (struct sockaddr*)&client_addr, client_len);
@@ -126,6 +131,12 @@ void webCommandHandler() {
         } else if (command =="toggleAC") {
             cout << "[AC] AC toggled via Web." << endl;
             toggleAC();
+        } else if (command =="toggleHeatingMode") {
+            cout << "[HEATING] Heating mode toggled via Web." << endl; 
+            toggleHeatingMode();
+        } else if (command =="toggleHeating") {
+            cout << "[HEATING] Heating toggled via Web." << endl;
+            toggleHeating();
         } else {
             cout << "[System] Unknown command received: [" << command << "]" << endl;
         }
@@ -143,24 +154,45 @@ void temperatureMonitor()
     while (running) {
         float temp = 0.0f, hum = 0.0f;
         if (readDHT11(temp, hum)) {
-            if(acManualMode) {
-                // In manual mode, the AC is controlled by the user, so we don't automatically turn it on/off
+            if(acManualMode && heatingManualMode) {
+                // In manual mode, the AC and heating is controlled by the user, so we don't automatically turn it on/off
                 this_thread::sleep_for(chrono::seconds(3));
                 continue;
             }
-            // cout << "[DHT11] Temp: " << temp << " C  |  Hum: " << hum << " %" << endl;
-            bool shouldBeOn = (temp > AC_THRESHOLD_C);
-            if (shouldBeOn && !acOn) {
-                // transition from cool to hot (turn the AC on)
-                cout << "[AC] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
-                toggleAC();
-            } else if (!shouldBeOn && acOn) {
-                // transition from hot to cool (turn the AC off)
-                cout << "[AC] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
-                toggleAC();
+
+            if(!acManualMode){
+                // cout << "[DHT11] Temp: " << temp << " C  |  Hum: " << hum << " %" << endl;
+                bool acShouldBeOn = (temp > AC_THRESHOLD_C);
+                if (acShouldBeOn && !acOn) {
+                    // transition from cool to hot (turn the AC on)
+                    cout << "[AC] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
+                    toggleAC();
+                } else if (!acShouldBeOn && acOn) {
+                    // transition from hot to cool (turn the AC off)
+                    cout << "[AC] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
+                    toggleAC();
+                }
             }
+
+            if(!heatingManualMode){
+                bool heatingShouldBeOn = (temp < HEATING_THRESHOLD_C);
+                if (heatingShouldBeOn && !heatingOn) {
+                    // transition from hot to cool (turn the heating on)
+                    cout << "[HEATING] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
+                    toggleHeating();
+                } else if (!heatingShouldBeOn && heatingOn) {
+                    // transition from cool to hot (turn the heatong off)
+                    cout << "[HEATING] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
+                    toggleHeating();
+                }
+            }
+
         } else {
-            cout << "[DHT11] Read failed." << endl;
+            #ifdef SIM
+                cout << "[DHT11] Temp: " <<rand()%(5) + 28 << " C  |  Hum: " << rand()%(50) + 30 << " %" << endl;
+            #else
+                cout << "[DHT11] Read failed." << endl;
+            #endif
         }
         this_thread::sleep_for(chrono::seconds(3));
     }
@@ -171,7 +203,8 @@ int main() {
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
     initAlarmLED(GPIO_CHIP, ALARM_LED);
     initLightsLED(GPIO_CHIP, LIGHTS_LED);
-    initTempLED(GPIO_CHIP, TEMP_LED);
+    initACLED(GPIO_CHIP, AC_LED);
+    initHeatingLED(GPIO_CHIP, HEATING_LED);
     initIR(onRawFrame);
     initDHT11();   
     initGate(GPIO_CHIP, GATE_PIN);
