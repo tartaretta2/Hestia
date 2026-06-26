@@ -31,7 +31,7 @@ The project can be built in two modes:
 
 The reference setup runs on a **Raspberry Pi 5** wired according to the diagram in [`HestiaCircuit.pdf`](./HestiaCircuit.pdf).
 
-![circuit image](./HestiaCircuit.pdf)
+![circuit image](./HestiaCircuit.jpg)
 
 | Component | Role | Default GPIO (BCM) |
 |---|---|---|
