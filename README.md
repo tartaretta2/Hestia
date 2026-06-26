@@ -29,7 +29,9 @@ The project can be built in two modes:
 
 ### Hardware Requirements
 
-The reference setup runs on a **Raspberry Pi 5** wired according to the diagram in [`PinDiagram_RaspberryPi5.jpg`](./PinDiagram_RaspberryPi5.jpg).
+The reference setup runs on a **Raspberry Pi 5** wired according to the diagram in [`HestiaCircuit.pdf`](./HestiaCircuit.pdf).
+
+![circuit image](./HestiaCircuit.pdf)
 
 | Component | Role | Default GPIO (BCM) |
 |---|---|---|
@@ -80,7 +82,8 @@ The reference setup runs on a **Raspberry Pi 5** wired according to the diagram 
 Hestia/
 ├── README.md
 ├── Makefile                      # build rules: `sim` and `release`
-├── PinDiagram_RaspberryPi5.jpg   # wiring diagram
+├── PinDiagram_RaspberryPi5.jpg   # Raspberry Pi 5 pin diagram
+├── HestiaCircuit.pdf             # circuit wiring diagram
 │
 ├── include/                      # public headers / module interfaces
 │   ├── houseControl.h            # GPIO pin map + high-level control API
@@ -179,7 +182,7 @@ cd ~/Hestia
 make release
 ```
 
-Make sure the wiring matches [`PinDiagram_RaspberryPi5.jpg`](./PinDiagram_RaspberryPi5.jpg) and that the DHT11 IIO overlay is enabled before running.
+Make sure the wiring matches [`HestiaCircuit.pdf`](./HestiaCircuit.pdf) and that the DHT11 IIO overlay is enabled before running.
 
 ### 3. Run
 
