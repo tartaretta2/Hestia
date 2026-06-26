@@ -209,7 +209,7 @@ void cameraLoop(){
             string plateText = getLicencePlate(frame, fineBox, api);
             
             // draw the detection box on the frame
-            rectangle(frame, boxes[idx], Scalar(0, 255, 0), 3);
+            //rectangle(frame, boxes[idx], Scalar(0, 255, 0), 3);
             
             if(plateText == ""){
                 cout <<"No text detected"<<endl;
@@ -222,8 +222,8 @@ void cameraLoop(){
             }
             
             //overlay the confidence value next to the box
-            string label = "LICENCE PLATE: " + to_string(confidences[idx]).substr(0, 4);
-            putText(frame, label, Point(boxes[idx].x, boxes[idx].y - 10), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 1);
+            // string label = "LICENCE PLATE: " + to_string(confidences[idx]).substr(0, 4);
+            // putText(frame, label, Point(boxes[idx].x, boxes[idx].y - 10), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 1);
         }
 
         //UNCOMMENT TO DEBUG CAMERA

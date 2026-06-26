@@ -20,7 +20,7 @@ static gpiod_line_request *AC_req = nullptr;
 static gpiod_chip *heating_chip = nullptr;
 static gpiod_line_request *heating_req = nullptr;
 
-static void initOneLED(const char* gpioChip, unsigned int ledPin, const char* consumer, gpiod_chip** chip_out, gpiod_line_request** req_out)
+void initOneLED(const char* gpioChip, unsigned int ledPin, const char* consumer, gpiod_chip** chip_out, gpiod_line_request** req_out)
 {
     cout << "Initializing LED (" << consumer << ") on " << gpioChip << ", pin " << ledPin << endl;
 
