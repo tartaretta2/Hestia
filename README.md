@@ -12,7 +12,7 @@ Hestia turns a Raspberry Pi 5 into the controller of a small smart house. A sing
 - 📺 Infrared remote control over the whole house
 - 🌐 Web application control over the whole house
 
-The project can be built in two flavours:
+The project can be built in two modes:
 - **`release`** — runs on the real Raspberry Pi 5 hardware (GPIO, camera, servo, sensors).
 - **`sim`** — a full **simulation mode** that compiles and runs on any Linux/macOS machine without any hardware attached, faking sensor input so the whole logic can be tested from a normal PC.
 
