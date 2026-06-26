@@ -29,14 +29,15 @@
 // Smart house function controlled by the remote
 enum class Action {
     None,
-    AlarmToggle,     // POWER -> alarm on/off
+    AlarmToggle,     // PLAY/PAUSE -> alarm on/off
     LightsToggle,    // 1     -> lights on/off
     GateToggle,      // 2     -> gate open/close
-    HeatingToggle,   // 3     -> heating on/off
-    LightsUp,        // VOL+  -> increase brightness
-    LightsDown,      // VOL-  -> decrease brightness
-    SirenToggle,     // PLAY/PAUSE -> siren on/off
-    ShutdownSystem,   // FUNC/STOP -> shutdown system
+    ToggleLightsMode, // FUNC/STOP -> toggle lights mode (manual / motion sensor)
+    ToggleACMode,    // 3     -> toggle AC mode (manual / automatic)
+    ToggleAC,        // 4     -> toggle AC on/off (only in manual mode
+    ToggleHeatingMode,    // 0     -> toggle Heating mode (manual / automatic)
+    ToggleHeating,        // 5     -> toggle Heating on/off (only in manual mode
+    ShutdownSystem,   // POWER -> shutdown system
     Unknown
 };
 

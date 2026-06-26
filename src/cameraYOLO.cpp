@@ -74,6 +74,9 @@ string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
     int p = 15;
     copyMakeBorder(cleanMask, cleanMask, p, p, p, p, BORDER_CONSTANT, Scalar(255));
 
+    //UNCOMMENT TO DEBUG CAMERA
+    // imshow("DEBUG: Maschera Corretta", cleanMask);
+
     // OCR
     api->SetImage(cleanMask.data, cleanMask.cols, cleanMask.rows, 1, cleanMask.step);
     char *outText = api->GetUTF8Text();
@@ -124,7 +127,17 @@ void cameraLoop(){
     VideoCapture cap(0);
     if (!cap.isOpened()) return;
 
+    //UNCOMMENT TO DEBUG CAMERA
+    // auto output = infer_request.get_output_tensor(0);
+    // auto shape = output.get_shape();
+    // cout << "DEBUG YOLO26 - Output Shape: ";
+    // for (auto s : shape) cout << s << " ";
+    // cout << endl;
+
     Mat frame;
+
+    //UNCOMMENT TO DEBUG CAMERA
+    // namedWindow("Licence Plate Detector C++", WINDOW_NORMAL);
 
     while (alarmOn) {
         //grab a frame and stop if the stream ended or returned nothing
@@ -176,7 +189,7 @@ void cameraLoop(){
                 int width = int((x2 - x1) * x_factor);
                 int height = int((y2 - y1) * y_factor);
 
-                cout << "YOLO26 ha trovato una targa! Conf: " << confidence 
+                cout << "YOLO26 has found a licence plate! Conf: " << confidence 
                 << " Box: [" << left << "," << top << "," << width << "," << height << "]" << endl;
 
                 boxes.push_back(Rect(left, top, width, height));
@@ -196,7 +209,7 @@ void cameraLoop(){
             string plateText = getLicencePlate(frame, fineBox, api);
             
             // draw the detection box on the frame
-            rectangle(frame, boxes[idx], Scalar(0, 255, 0), 3);
+            //rectangle(frame, boxes[idx], Scalar(0, 255, 0), 3);
             
             if(plateText == ""){
                 cout <<"No text detected"<<endl;
@@ -209,10 +222,13 @@ void cameraLoop(){
             }
             
             //overlay the confidence value next to the box
-            string label = "TARGA: " + to_string(confidences[idx]).substr(0, 4);
-            putText(frame, label, Point(boxes[idx].x, boxes[idx].y - 10), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 1);
+            // string label = "LICENCE PLATE: " + to_string(confidences[idx]).substr(0, 4);
+            // putText(frame, label, Point(boxes[idx].x, boxes[idx].y - 10), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 1);
         }
 
+        //UNCOMMENT TO DEBUG CAMERA
+        // imshow("Licence Plate Detector C++", frame);
+        // if (waitKey(1) == 'q') break;
     }
 
     //release Tesseract and the camera before leaving the thread
@@ -229,7 +245,7 @@ void cameraLoop(){
 #include <chrono>
 
 static void cameraLoopSim(){
-    cout << "[CAMERA SIM] Inizializzata. Targa riconosciuta tra ~7 secondi..." << endl;
+    cout << "[CAMERA SIM] Initialized. Licence plate recognized in ~7 seconds..." << endl;
 
     //wait 7s: if the alarm is disarmed meanwhile the thread
     // exits immediately, so the join in stopCameraSystem() never blocks
@@ -239,7 +255,7 @@ static void cameraLoopSim(){
 
     if (!alarmOn) return; // disarmed in the meantime: simulate nothing
 
-    cout << "[CAMERA SIM] Targa rilevata" << endl;
+    cout << "[CAMERA SIM] Licence plate detected" << endl;
     checkPlate("CZ889KF"); // authorized plate -> requests the disarm
 }
 

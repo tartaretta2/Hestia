@@ -23,14 +23,21 @@
     #define GATE_PIN 24   
     
     //DHT11
-    #define TEMP_LED 23
+    #define AC_LED 23
+    #define HEATING_LED 5
 #endif
 
 void toggleAlarmActivation();
 void toggleGateActivation();
+void toggleLightsActivation();
 void alarmMSListener();
-void lightsMSListener();
+void lightsMSListener(bool firstEntry = true);
 void startLightsListener();
 void toggleSiren();
 void shutdownSystem();
 void checkPlate(const std::string& plate);
+void toggleLightsMode();
+void toggleACMode();
+void toggleHeatingMode(); 
+void toggleAC();
+void toggleHeating();
