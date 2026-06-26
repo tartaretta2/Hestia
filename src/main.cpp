@@ -201,10 +201,7 @@ void temperatureMonitor()
 int main() {
 #ifndef SIM
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
-    initAlarmLED(GPIO_CHIP, ALARM_LED);
-    initLightsLED(GPIO_CHIP, LIGHTS_LED);
-    initACLED(GPIO_CHIP, AC_LED);
-    initHeatingLED(GPIO_CHIP, HEATING_LED);
+    initLEDs(GPIO_CHIP, ALARM_LED, LIGHTS_LED, AC_LED, HEATING_LED);
     initIR(onRawFrame);
     initDHT11();   
     initGate(GPIO_CHIP, GATE_PIN);
