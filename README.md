@@ -14,7 +14,7 @@ Hestia turns a Raspberry Pi 5 into the controller of a small smart house. A sing
 
 The project can be built in two modes:
 - **`release`** — runs on the real Raspberry Pi 5 hardware (GPIO, camera, servo, sensors).
-- **`sim`** — a full **simulation mode** that compiles and runs on any Linux/macOS machine without any hardware attached, faking sensor input so the whole logic can be tested from a normal PC.
+- **`sim`** — a full **simulation mode** that compiles and runs on any machine without any hardware attached, faking sensor input so the whole logic can be tested from a normal PC.
 
 ---
 
@@ -54,7 +54,7 @@ The reference setup runs on a **Raspberry Pi 5** wired according to the diagram 
 
 ### Software Requirements
 
-**To run in simulation mode (any Linux/macOS machine, no hardware):**
+**To run in simulation mode (any machine, no hardware):**
 - `g++` with C++17 support
 - `make`
 - POSIX threads (`-lpthread`)
@@ -141,7 +141,7 @@ The whole C++ application is built with the provided [`Makefile`](./Makefile). T
 
 ### 1. Build
 
-**Simulation mode** (any Linux/macOS machine, no hardware required):
+**Simulation mode** (any machine, no hardware required):
 
 ```sh
 # From the root of the project
