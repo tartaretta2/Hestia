@@ -20,7 +20,7 @@ The project can be built in two flavours:
 
 ## Presentation & Video
 
-- 📊 **PowerPoint presentation:** (./HestiaV1-Presentation.pdf)
+- 📊 **PowerPoint presentation:** [`HestiaV1-Presentation.pdf`](./HestiaV1-Presentation.pdf)
 - ▶️ **YouTube video:** _[add link here]_
 
 ---
