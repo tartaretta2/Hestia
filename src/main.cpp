@@ -57,21 +57,22 @@ void webCommandHandler() {
     if (server_fd < 0) return;
 
     sockaddr_in address;
-    std::memset(&address, 0, sizeof(address));
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_ANY); 
-    address.sin_port = htons(12345);      
+    std::memset(&address, 0, sizeof(address)); // Clean the structure to avoid garbage values
+    address.sin_family = AF_INET; // Sets the address family to IPv4
+    address.sin_addr.s_addr = htonl(INADDR_ANY); // Accept connections from any IP address
+    address.sin_port = htons(12345); // Listen on port 12345 for incoming UDP packets
 
-    int opt = 1;
-    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    ::bind(server_fd, (struct sockaddr*)&address, sizeof(address));
-
+    
     // Set a timeout for recvfrom to avoid blocking indefinitely
+    // and allow address reuse to avoid "Address already in use" errors on restart
+    int opt = 1;
     struct timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
     setsockopt(server_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    ::bind(server_fd, (struct sockaddr*)&address, sizeof(address));
+    
     char buffer[1024];
     sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);

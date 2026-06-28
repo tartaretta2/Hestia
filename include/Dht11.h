@@ -7,19 +7,17 @@
 class DHT11 {
 public:
   
-    DHT11(const std::string& iio_path = "/sys/bus/iio/devices/iio:device0");
+    DHT11(const string& iio_path = "/sys/bus/iio/devices/iio:device0");
 
 
     bool read(float& temperature, float& humidity, int max_retry = 5);
 
 private:
-    std::string temp_file_;
-    std::string hum_file_;
+    string temp_file_;
+    string hum_file_;
 
-    bool readSensorFile(const std::string& path, float& value);
+    bool readSensorFile(const string& path, float& value);
 };
-
-
 
 namespace dht11_api {
 
@@ -34,4 +32,4 @@ namespace dht11_api {
 
 }
 
-#endif // DHT11_H
+#endif

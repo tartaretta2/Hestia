@@ -28,13 +28,13 @@ static bool g_receiving = false; // true se siamo dentro un frame in corso di ri
 static IrRawFrame g_buf[2]; // double buffer, mentre il thread ISR riempie uno, il decoder legge dall'altro
 static int g_active = 0; // indice del buffer attualmente in scrittura
 
-// Thread interrupt-driven: gpiod_line_request_wait_edge_events blocca
-// il thread finchè il kernel non riceve un interrupt hardware dal GPIO.
+// The thread waits for edge events from the GPIO line and processes them to build IrRawFrame objects
 static void irqThread()
 {
     while (g_threadRun) {
 
-        int ret = gpiod_line_request_wait_edge_events(g_request, NEC_FRAME_TIMEOUT * 1000ULL); // vuole nanosecondi
+        // wait for edge events with a timeout to exit the frame if no edges are received for a while
+        int ret = gpiod_line_request_wait_edge_events(g_request, NEC_FRAME_TIMEOUT * 1000ULL); 
 
         if (ret < 0) {
             cerr << "[IR] wait_edge_events errore" << endl;
@@ -42,55 +42,53 @@ static void irqThread()
         }
 
         if (ret == 0) {
-            // Timeout: silenzio > 15ms -> fine frame
             IrRawFrame frameToSend;
             bool hasFrame = false;
             {
                 lock_guard<mutex> lock(g_mutex);
                 if (g_receiving && g_buf[g_active].count > 0) {
-                    frameToSend = g_buf[g_active];
-                    hasFrame = true;
-                    g_active = 1 - g_active;
-                    g_buf[g_active] = IrRawFrame{};
+                    frameToSend = g_buf[g_active]; // copy the frame to send outside the lock
+                    hasFrame = true; // we have a complete frame to send
+                    g_active = 1 - g_active; // switch to the other buffer for the next frame
+                    g_buf[g_active] = IrRawFrame{}; // reset the new active buffer
                 }
-                g_receiving = false;
+                g_receiving = false; // reset receiving state after timeout
             }
             if (hasFrame)
-                callback(frameToSend);
+                callback(frameToSend); // call the callback outside the lock to avoid potential deadlocks
             continue;
         }
 
-        // Edge arrivato: leggi l'evento
+        // Edge detected, read and process all available events
         int n = gpiod_line_request_read_edge_events(g_request, g_eventBuf, 1);
         if (n < 0) continue;
 
         for (int i = 0; i < n; i++) {
             gpiod_edge_event* event = gpiod_edge_event_buffer_get_event(g_eventBuf, i);
 
-            uint64_t tickUs = gpiod_edge_event_get_timestamp_ns(event) / 1000ULL;
+            uint64_t tickUs = gpiod_edge_event_get_timestamp_ns(event) / 1000ULL; // convert nanoseconds to microseconds
             bool level = (gpiod_edge_event_get_event_type(event) == GPIOD_EDGE_EVENT_RISING_EDGE);
 
             lock_guard<mutex> lock(g_mutex);
 
             if (!g_receiving) {
-                // Aggiorna sempre lastTick per misurare il silenzio
+                // update the last tick and check if we should start receiving a new frame
                 uint64_t silence = tickUs - g_lastTick;
                 g_lastTick = tickUs;
 
-                // Inizia a registrare solo su fronte di DISCESA (inizio burst)
-                // e solo dopo un silenzio lungo almeno NEC_FRAME_TIMEOUT:
-                // questo garantisce che siamo all'inizio del frame
+                // start receiving a new frame only if the previous level was LOW 
+                // and the silence duration is greater than NEC_FRAME_TIMEOUT
                 if (!level && silence >= NEC_FRAME_TIMEOUT) {
                     g_receiving = true;
                 }
             } else {
-                // Siamo dentro un frame: registra durata e livello
+                // currently receiving a frame, record the edge duration and level
                 IrRawFrame& frame = g_buf[g_active];
                 if (frame.count < IR_MAX_EDGES) {
                     frame.edges[frame.count] = IrEdge(static_cast<uint32_t>(tickUs - g_lastTick), level);
                     frame.count++;
                 }
-                g_lastTick = tickUs; // aggiorna timestamp per prossimo edge
+                g_lastTick = tickUs; // update timestamp for next edge
             }
         }
     }

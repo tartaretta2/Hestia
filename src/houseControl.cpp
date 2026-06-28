@@ -18,11 +18,9 @@
 
 using namespace std;
 
-//targa autorizzate
 static const vector<string> authorizedPlates = {
     "CZ889KF"
 };
-
 
 // Shared state variables defined in main.cpp
 extern atomic<bool> sirenOn;
@@ -46,7 +44,7 @@ static atomic<uint64_t> lightsOffToken(0); // token used to check if thread shou
 void toggleAlarmActivation() {
     armRequested = false; // Reset the arm request flag
     disarmRequested = false; // Reset the disarm request flag
-
+    
     #ifdef SIM
         alarmOn = !alarmOn;
         cout << (alarmOn ? "Alarm ON" : "Alarm OFF") << endl;

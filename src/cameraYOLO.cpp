@@ -22,7 +22,7 @@ extern atomic<bool> alarmOn;
 
 #ifndef SIM
 
-//extracts and OCRs the licence plate text from a detected bounding box
+//extracts the licence plate text from a detected bounding box and applies OCR
 // returns the cleaned plate string or "" if nothing reliable is read
 string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
 

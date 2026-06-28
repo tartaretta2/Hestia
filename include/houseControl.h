@@ -35,7 +35,7 @@ void lightsMSListener(bool firstEntry = true);
 void startLightsListener();
 void toggleSiren();
 void shutdownSystem();
-void checkPlate(const std::string& plate);
+void checkPlate(const string& plate);
 void toggleLightsMode();
 void toggleACMode();
 void toggleHeatingMode(); 

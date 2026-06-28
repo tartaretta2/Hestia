@@ -10,7 +10,8 @@ CPP_PORT = 12345
 def sendCommand(action, expect_reply=False):
     try:
         sckt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sckt.settimeout(1.0) # If the C++ server doesn't respond within 1 second, it will timeout
+        # If the C++ server doesn't respond within 1 second, it will timeout
+        sckt.settimeout(1.0) 
         sckt.sendto(action.encode('utf-8'), (CPP_IP, CPP_PORT))
         
         if expect_reply:
