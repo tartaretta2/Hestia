@@ -241,13 +241,11 @@ void cameraLoop(){
 #include <chrono>
 
 static void cameraLoopSim(){
-    cout << "[CAMERA SIM] Initialized. Licence plate recognized in ~7 seconds..." << endl;
+    cout << "[CAMERA SIM] Initialized. Licence plate recognized in ~3 seconds..." << endl;
 
-    //wait 7s: if the alarm is disarmed while the thread is running
+    //wait 3s: if the alarm is disarmed while the thread is running
     // exits immediately, so the join in stopCameraSystem() never blocks
-    for (int i = 0; i < 7 && alarmOn; i++) {
-        this_thread::sleep_for(chrono::milliseconds(1000));
-    }
+    this_thread::sleep_for(chrono::milliseconds(3000));
 
     if (!alarmOn) return; // disarmed in the meantime: simulate nothing
 

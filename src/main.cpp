@@ -148,14 +148,15 @@ int main() {
 #ifndef SIM
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
     initLEDs(GPIO_CHIP, ALARM_LED, LIGHTS_LED, AC_LED, HEATING_LED);
-    initIR(onRawFrame);
     initDHT11();   
     initGate(GPIO_CHIP, GATE_PIN);
 #endif
 
-    // Start the web commands handler thread
-    thread webThread(webCommandHandler);
+    initIR(onRawFrame);
+    startTemperatureMonitor();
 
+    #ifndef SIM
+    cout << "System initialized. Waiting for commands..." << endl;
     cout << "Press remote:" << endl 
         << " POWER button to turn off the whole system" << endl
         << " PLAY/PAUSE button to turn on the alarm system" << endl
@@ -166,6 +167,10 @@ int main() {
         << " 3 button to toggle AC mode (manual/automatic)" << endl
         << " 4 to toggle AC" << endl
         << " 5 to toggle heating" << endl;
+    #endif
+
+    // Start the web commands handler thread
+    thread webThread(webCommandHandler);
 
     while (running) {
         

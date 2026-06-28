@@ -50,4 +50,5 @@ void toggleACMode();
 void toggleHeatingMode(); 
 void toggleAC();
 void toggleHeating();
+void startTemperatureMonitor();
 void shutdownSystem();

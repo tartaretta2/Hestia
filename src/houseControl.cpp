@@ -46,6 +46,10 @@ void toggleAlarmActivation() {
     
     #ifdef SIM
         alarmOn = !alarmOn;
+        if(alarmOn)
+            initCameraSystem();
+        else 
+            stopCameraSystem();
         cout << (alarmOn ? "Alarm ON" : "Alarm OFF") << endl;
     #else
     if (!alarmOn) {
@@ -141,14 +145,14 @@ void lightsMSListener(bool firstEntry) {
                     // Simulate the falling edge / inactivity timer
                     auto token = ++lightsOffToken;
                     thread([token]() {
+                        cout << "LightsMS: motion ended, lights OFF scheduled" << endl;
                         this_thread::sleep_for(chrono::seconds(10));
                         if (lightsManualMode) return; // Skip motion sensor control if mode is manual
                         if (token == lightsOffToken.load()) { // only turn off lights if no new motion has been detected since the thread sleep started
                             simulateLED(false);
-                            lightsOn = false;
                         }
                     }).detach();
-                    cout << "LightsMS: motion ended, lights OFF scheduled" << endl;
+                    lightsOn = false;
                 }
             }
             this_thread::sleep_for(chrono::seconds(2)); // in simulation check every 2 sec
@@ -172,15 +176,15 @@ void lightsMSListener(bool firstEntry) {
                 // Falling edge: motion ended, schedule lights off
                 if (lightsOn) {
                     auto token = ++lightsOffToken;
-                    cout << "LightsMS: falling edge, lights OFF scheduled" << endl;
                     thread([token]() {
+                        cout << "LightsMS: falling edge, lights OFF scheduled" << endl;
                         this_thread::sleep_for(chrono::seconds(3));
                         if (lightsManualMode) return; 
                         if (token == lightsOffToken.load()) {
                             setLED(LIGHTS_LED, false);
-                            lightsOn = false;
                         }
                     }).detach();
+                    lightsOn = false;                
                 }
             }
 #endif

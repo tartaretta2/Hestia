@@ -179,7 +179,7 @@ static IrRawFrame buildNecFrame(uint8_t cmd)
 }
 
 static const uint8_t SIM_KEYS[] = {
-    0x45,  // POWER -> ShutdownSystem
+    //0x45,   POWER -> ShutdownSystem (avoided in simulation to prevent accidental shutdown)
     0x40,  // PLAY/PAUSE -> AlarmToggle
     0x47,  // FUNC/STOP -> ToggleLightsMode
     0x16,  // 0 -> ToggleHeatingMode
@@ -194,7 +194,7 @@ static void simThread()
 {
     int idx = 0;
     while (g_simRun) {
-        this_thread::sleep_for(chrono::seconds(2));
+        this_thread::sleep_for(chrono::seconds(5));
         if (!g_simRun) break;
         // simulate sending a key by building a frame and calling the callback
         IrRawFrame frame = buildNecFrame(SIM_KEYS[idx % sizeof(SIM_KEYS)]);
@@ -208,7 +208,7 @@ void initIR(IrCallback cb)
     callback = cb;
     g_simRun = true;
     g_simThread = thread(simThread);
-    cout << "[IR] Simulation on. A key every 2 seconds." << endl;
+    cout << "[IR] Simulation on. A key every 5 seconds." << endl;
 }
 
 void cleanupIR()
