@@ -1,73 +1,68 @@
 #include "Dht11.h"
 #include <fstream>
 #include <unistd.h>
+#include <thread>
+#include <chrono>
 
-// =====================================================================
-// Implementazione della classe DHT11
-// =====================================================================
+using namespace std;
 
-DHT11::DHT11(const std::string& iio_path)
-    : temp_file_(iio_path + "/in_temp_input"),
-      hum_file_(iio_path + "/in_humidityrelative_input") {}
+static string temp_file;
+static string hum_file;
+static bool initialized = false;
 
-bool DHT11::readSensorFile(const std::string& path, float& value) {
-    std::ifstream f(path);
-    if (!f.is_open()) {
-        // File non aprito (es. "Connection timed out" o overlay non caricato)
+// Reads a single value (in millesimi) from a kernel iio sysfs file
+static bool readSensorFile(const string& path, float& value)
+{
+    ifstream f(path);
+    if (!f.is_open())
+    {
+        // File non aperto (es. "Connection timed out" o overlay non caricato)
         return false;
     }
     long raw = 0;
     f >> raw;
-    if (f.fail()) {
+    if (f.fail())
         return false;
-    }
-    // Il driver kernel restituisce valori in millesimi (es. 25000 = 25.0 �C)
+
+    // Il driver kernel restituisce valori in millesimi (es. 25000 = 25.0 C)
     value = static_cast<float>(raw) / 1000.0f;
     return true;
 }
 
-bool DHT11::read(float& temperature, float& humidity, int max_retry) {
-    for (int tentativo = 1; tentativo <= max_retry; tentativo++) {
-        float t = 0.0f, h = 0.0f;
-        bool ok_t = readSensorFile(temp_file_, t);
-        bool ok_h = readSensorFile(hum_file_,  h);
+void initDHT11(const string& iio_path)
+{
+    temp_file = iio_path + "/in_temp_input";
+    hum_file = iio_path + "/in_humidityrelative_input";
+    initialized = true;
+}
 
-        if (ok_t && ok_h) {
-            temperature = t;
-            humidity    = h;
+bool readDHT11(float& temp, float& hum)
+{
+    if (!initialized)
+        return false;
+
+    const int max_retry = 5;
+    for (int tentativo = 1; tentativo <= max_retry; tentativo++)
+    {
+        float t = 0.0f, h = 0.0f;
+        bool ok_t = readSensorFile(temp_file, t);
+        bool ok_h = readSensorFile(hum_file, h);
+
+        if (ok_t && ok_h)
+        {
+            temp = t;
+            hum = h;
             return true;
         }
 
         // Il driver DHT11 ha bisogno di ~2s tra letture consecutive
-        if (tentativo < max_retry) {
-            sleep(2);
-        }
+        if (tentativo < max_retry)
+            this_thread::sleep_for(chrono::seconds(2));
     }
     return false;
 }
 
-
-namespace dht11_api {
-
-    // Istanza globale del sensore (creata da initDHT11, distrutta da cleanupDHT11)
-    static DHT11* g_sensor = nullptr;
-
-    void initDHT11() {
-        if (!g_sensor) {
-            g_sensor = new DHT11();
-        }
-    }
-
-    bool readDHT11(float& temp, float& hum) {
-        if (!g_sensor) {
-            return false;
-        }
-        return g_sensor->read(temp, hum);
-    }
-
-    void cleanupDHT11() {
-        delete g_sensor;
-        g_sensor = nullptr;
-    }
-
+void cleanupDHT11()
+{
+    initialized = false;
 }

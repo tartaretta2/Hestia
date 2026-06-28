@@ -3,6 +3,8 @@
 #include <atomic>
 #include <string>
 
+using namespace std;
+
 #ifndef SIM
     #define GPIO_CHIP "/dev/gpiochip4"
     // GPIO pin numbers for the various devices
@@ -26,6 +28,10 @@
     #define AC_LED 23
     #define HEATING_LED 5
 #endif
+
+// AC threshold: turn the AC led on when temperature > 30C
+#define AC_THRESHOLD_C 31.0f
+#define HEATING_THRESHOLD_C 30.0f
 
 void toggleAlarmActivation();
 void toggleGateActivation();

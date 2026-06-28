@@ -26,6 +26,8 @@
 #define KEY_8           0x52
 #define KEY_9           0x4A
 
+using namespace std;
+
 // Smart house function controlled by the remote
 enum class Action {
     None,

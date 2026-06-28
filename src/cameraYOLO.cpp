@@ -12,8 +12,6 @@
 #include <vector>
 #endif
 
-using namespace std;
-
 //thread running the camera loop (real detection or simulation)
 static thread cameraThread;
 

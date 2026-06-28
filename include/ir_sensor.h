@@ -6,6 +6,7 @@
 #include <functional>
 #include <array>
 
+using namespace std;
 
 // NEC protocol timing parameters (in microseconds)
 // Elegoo remote uses NEC: each bit is encoded as a burst (562us) + space (562us for 0, 1687us for 1).
@@ -21,9 +22,6 @@
 #define NEC_LEADER_TOLERANCE 2000  // tolerance for leader burst and space (longer, to allow for noise)
 #define NEC_FRAME_TIMEOUT  15000 // max time to wait for a complete frame (in microseconds)
 #define IR_MAX_EDGES       128   // max number of edges in a raw frame (leader + 32 bits * 2 edges/bit = 66, plus some margin for noise)
-
-
-
 
 // A single edge detected by the ISR: duration of the previous level and new level after the edge
 // Corresposponds to a transition from HIGH to LOW or vice versa, with the duration of the previous state in microseconds.

@@ -1,5 +1,7 @@
 #pragma once
 
+using namespace std;
+
 #ifndef SIM
 bool initAlarmMS(const char* gpioChip, const unsigned int msPin);
 int readAlarmMS();

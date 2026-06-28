@@ -1,5 +1,7 @@
 #pragma once
 
+using namespace std;
+
 #ifndef SIM
 void initGate(const char* gpioChip, const unsigned int gatePin);
 void toggleGate(const unsigned int gatePin);

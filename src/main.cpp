@@ -17,7 +17,6 @@
 #include <cstring> // Added for std::memset
 
 using namespace std;
-using namespace dht11_api;
 
 // Global state flags shared across threads
 // (atomic ensures safe concurrent access)
@@ -34,9 +33,6 @@ atomic<bool> heatingManualMode(false); // true when the heating is in manual mod
 atomic<bool> acOn(false); // true when the AC is on (set by temperature monitor thread)
 atomic<bool> heatingOn(false); // true when the heating is on (set by temperature monitor thread)
 
-// AC threshold: turn the AC led on when temperature > 30C
-constexpr float AC_THRESHOLD_C = 31.0f;
-constexpr float HEATING_THRESHOLD_C = 30.0f;
 
 // Called by the IR receiver when a complete NEC frame is captured.
 // It decodes the frame and dispatches the resulting command.
@@ -149,56 +145,6 @@ void webCommandHandler() {
     close(server_fd);
 }
 
-// Reads DHT11 periodically and triggers the AC LED when above threshold
-void temperatureMonitor()
-{
-    while (running) {
-        float temp = 0.0f, hum = 0.0f;
-        if (readDHT11(temp, hum)) {
-            if(acManualMode && heatingManualMode) {
-                // In manual mode, the AC and heating is controlled by the user, so we don't automatically turn it on/off
-                this_thread::sleep_for(chrono::seconds(3));
-                continue;
-            }
-
-            if(!acManualMode){
-                // cout << "[DHT11] Temp: " << temp << " C  |  Hum: " << hum << " %" << endl;
-                bool acShouldBeOn = (temp > AC_THRESHOLD_C);
-                if (acShouldBeOn && !acOn) {
-                    // transition from cool to hot (turn the AC on)
-                    cout << "[AC] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
-                    toggleAC();
-                } else if (!acShouldBeOn && acOn) {
-                    // transition from hot to cool (turn the AC off)
-                    cout << "[AC] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
-                    toggleAC();
-                }
-            }
-
-            if(!heatingManualMode){
-                bool heatingShouldBeOn = (temp < HEATING_THRESHOLD_C);
-                if (heatingShouldBeOn && !heatingOn) {
-                    // transition from hot to cool (turn the heating on)
-                    cout << "[HEATING] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
-                    toggleHeating();
-                } else if (!heatingShouldBeOn && heatingOn) {
-                    // transition from cool to hot (turn the heatong off)
-                    cout << "[HEATING] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
-                    toggleHeating();
-                }
-            }
-
-        } else {
-            #ifdef SIM
-                cout << "[DHT11] Temp: " <<rand()%(5) + 28 << " C  |  Hum: " << rand()%(50) + 30 << " %" << endl;
-            #else
-                cout << "[DHT11] Read failed." << endl;
-            #endif
-        }
-        this_thread::sleep_for(chrono::seconds(3));
-    }
-}
-
 int main() {
 #ifndef SIM
     initBuzzer(GPIO_CHIP, BUZZER_PIN);
@@ -207,8 +153,6 @@ int main() {
     initDHT11();   
     initGate(GPIO_CHIP, GATE_PIN);
 #endif
-
-    thread tempThread(temperatureMonitor);
 
     // Start the web commands handler thread
     thread webThread(webCommandHandler);
@@ -239,10 +183,6 @@ int main() {
             // Avoid busy waiting when siren is off
             this_thread::sleep_for(chrono::milliseconds(100));
         }
-    }
-
-    if (tempThread.joinable()) {
-        tempThread.join();
     }
 
     cout << "Shutting down web interface..." << endl;    

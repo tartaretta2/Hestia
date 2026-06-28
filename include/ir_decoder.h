@@ -4,6 +4,8 @@
 #include "ir_sensor.h"
 #include <cstdint>
 
+using namespace std;
+
 // NEC frame decoded
 struct NecFrame {
     uint8_t address;    // device address (8 bit)

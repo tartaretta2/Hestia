@@ -11,11 +11,12 @@
 #include <string>
 #include <iostream>
 
+using namespace std;
+
 #ifndef SIM
 using namespace cv;
 using namespace tesseract;
 using namespace cv::dnn;
-using namespace std;
 
 const float INPUT_WIDTH = 640.0;
 const float INPUT_HEIGHT = 640.0;
