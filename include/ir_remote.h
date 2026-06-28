@@ -1,5 +1,4 @@
-#ifndef __IR_REMOTE_H__
-#define __IR_REMOTE_H__
+#pragma once
 
 #include <cstdint>
 
@@ -31,15 +30,15 @@ using namespace std;
 // Smart house function controlled by the remote
 enum class Action {
     None,
-    AlarmToggle,     // PLAY/PAUSE -> alarm on/off
-    LightsToggle,    // 1     -> lights on/off
-    GateToggle,      // 2     -> gate open/close
+    AlarmToggle, // PLAY/PAUSE -> alarm on/off
+    LightsToggle, // 1 -> lights on/off
+    GateToggle, // 2 -> gate open/close
     ToggleLightsMode, // FUNC/STOP -> toggle lights mode (manual / motion sensor)
-    ToggleACMode,    // 3     -> toggle AC mode (manual / automatic)
-    ToggleAC,        // 4     -> toggle AC on/off (only in manual mode
-    ToggleHeatingMode,    // 0     -> toggle Heating mode (manual / automatic)
-    ToggleHeating,        // 5     -> toggle Heating on/off (only in manual mode
-    ShutdownSystem,   // POWER -> shutdown system
+    ToggleACMode, // 3 -> toggle AC mode (manual / automatic)
+    ToggleAC, // 4 -> toggle AC on/off (only in manual mode)
+    ToggleHeatingMode, // 0 -> toggle Heating mode (manual / automatic)
+    ToggleHeating, // 5 -> toggle Heating on/off (only in manual mode)
+    ShutdownSystem, // POWER -> shutdown system
     Unknown
 };
 
@@ -50,13 +49,11 @@ struct Key {
     Action action;
 };
 
-// Search fot a key in among the codes, if none is found, nullptr is returned
+// Search for a key among the codes, if none is found, return nullptr
 const Key* lookupKey(uint8_t code);
 
 // Return the name of the action
 const char* actionName(Action a);
 
-// Handle the action and print the infos about a key
+// Handle the action and print the info about a key
 void handleKey(uint8_t code);
-
-#endif

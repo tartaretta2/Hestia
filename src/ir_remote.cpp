@@ -4,7 +4,7 @@
 
 using namespace std;
 
-extern atomic<bool> running; // Shared state variable defined in main.cpp
+extern atomic<bool> running; 
 
 // Key mapping for the remote control buttons
 // Key - Name - Action
@@ -32,6 +32,8 @@ static const Key KEYS[] = {
     { KEY_9,          "9",          Action::None             },
 };
 
+//lookup a key by its code and 
+//return a pointer to the Key struct or nullptr if not found
 const Key *lookupKey(uint8_t code)
 {
     for (const auto &k : KEYS)
@@ -40,6 +42,7 @@ const Key *lookupKey(uint8_t code)
     return nullptr;
 }
 
+//parse the action enum to a string (for logging)
 const char *actionName(Action action)
 {
     switch (action)
@@ -69,6 +72,7 @@ const char *actionName(Action action)
     }
 }
 
+//call function associated to pressed key
 void handleKey(uint8_t code)
 {
     const Key *key = lookupKey(code);

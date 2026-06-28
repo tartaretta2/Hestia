@@ -10,21 +10,21 @@ static string temp_file;
 static string hum_file;
 static bool initialized = false;
 
-// Reads a single value (in millesimi) from a kernel iio sysfs file
+// Reads a single value from a kernel iio system file
 static bool readSensorFile(const string& path, float& value)
 {
     ifstream f(path);
     if (!f.is_open())
     {
-        // File non aperto (es. "Connection timed out" o overlay non caricato)
         return false;
     }
+    
     long raw = 0;
     f >> raw;
     if (f.fail())
         return false;
 
-    // Il driver kernel restituisce valori in millesimi (es. 25000 = 25.0 C)
+    // The kernel driver returns the value multiplied by 1000
     value = static_cast<float>(raw) / 1000.0f;
     return true;
 }
@@ -42,7 +42,8 @@ bool readDHT11(float& temp, float& hum)
         return false;
 
     const int max_retry = 5;
-    for (int tentativo = 1; tentativo <= max_retry; tentativo++)
+    // The DHT11 driver needs about 2s between consecutive reads, so we retry a few times
+    for (int i = 1; i <= max_retry; i++)
     {
         float t = 0.0f, h = 0.0f;
         bool ok_t = readSensorFile(temp_file, t);
@@ -55,8 +56,7 @@ bool readDHT11(float& temp, float& hum)
             return true;
         }
 
-        // Il driver DHT11 ha bisogno di ~2s tra letture consecutive
-        if (tentativo < max_retry)
+        if (i < max_retry)
             this_thread::sleep_for(chrono::seconds(2));
     }
     return false;

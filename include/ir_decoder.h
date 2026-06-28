@@ -1,5 +1,4 @@
-#ifndef __IR_DECODER_H__
-#define __IR_DECODER_H__
+#pragma once
 
 #include "ir_sensor.h"
 #include <cstdint>
@@ -16,5 +15,3 @@ struct NecFrame {
 
 // Decode raw frame into NecFrame
 NecFrame decodeNEC(const IrRawFrame& raw);
-
-#endif

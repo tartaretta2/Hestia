@@ -30,6 +30,7 @@ void initOneLED(const char* gpioChip, unsigned int ledPin, const char* consumer,
         return;
     }
 
+    // configure the line settings for output and initial value low (inactive)
     gpiod_line_settings* s = gpiod_line_settings_new();
     gpiod_line_settings_set_direction(s, GPIOD_LINE_DIRECTION_OUTPUT);
     gpiod_line_settings_set_output_value(s, GPIOD_LINE_VALUE_INACTIVE);
@@ -37,6 +38,7 @@ void initOneLED(const char* gpioChip, unsigned int ledPin, const char* consumer,
     gpiod_line_config* lc = gpiod_line_config_new();
     gpiod_line_config_add_line_settings(lc, &ledPin, 1, s);
 
+    // request the line with the specified settings
     gpiod_request_config* rc = gpiod_request_config_new();
     gpiod_request_config_set_consumer(rc, consumer);
 
@@ -57,6 +59,7 @@ void initLEDs(const char* gpioChip, unsigned int alarmPin, unsigned int lightsPi
     initOneLED(gpioChip, heatingPin, "heating_led", &heating_chip, &heating_req);
 }
 
+// siren LED blinking  
 void toggleAlarmLED(const unsigned int ledPin)
 {
     if (!alarm_req)
@@ -72,6 +75,7 @@ void toggleAlarmLED(const unsigned int ledPin)
     }
 }
 
+// turn on/off an LED 
 void setLED(const unsigned int ledPin, bool on)
 {
     if (ledPin == ALARM_LED)
@@ -112,6 +116,7 @@ void setLED(const unsigned int ledPin, bool on)
     }
 }
 
+// turn off all LEDs and release GPIO resources
 void cleanupLEDs()
 {
     setLED(ALARM_LED, false);

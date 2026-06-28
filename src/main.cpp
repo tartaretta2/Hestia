@@ -19,23 +19,23 @@
 using namespace std;
 
 // Global state flags shared across threads
-// (atomic ensures safe concurrent access)
-atomic<bool> sirenOn(false);   // true when the buzzer/LED should be active
-atomic<bool> alarmOn(false);   // true when the alarm system is armed
+// atomic ensures safe concurrent access
+atomic<bool> sirenOn(false);   
+atomic<bool> alarmOn(false);   
 atomic<bool> running(true);    // main loop continues while true
-atomic<bool> lightsOn(false);  // true when the lights are on
-atomic<bool> gateOpen(false);   // true when the gate is open
-atomic<bool> armRequested(false); // true when the alarm system should be armed (set by remote or web command)
-atomic<bool> disarmRequested(false); // true when the alarm system should be disarmed (set by remote or web command)
+atomic<bool> lightsOn(false); 
+atomic<bool> gateOpen(false);
+atomic<bool> armRequested(false); // true when the alarm system should be armed (set by web interface)
+atomic<bool> disarmRequested(false); // true when the alarm system should be disarmed (set by camera or web interface)
 atomic<bool> lightsManualMode(true);
-atomic<bool> acManualMode(false); // true when the AC is in manual mode (set by web command)
-atomic<bool> heatingManualMode(false); // true when the heating is in manual mode (set by web command)
-atomic<bool> acOn(false); // true when the AC is on (set by temperature monitor thread)
-atomic<bool> heatingOn(false); // true when the heating is on (set by temperature monitor thread)
+atomic<bool> acManualMode(false); 
+atomic<bool> heatingManualMode(false); 
+atomic<bool> acOn(false); 
+atomic<bool> heatingOn(false); 
 
 
-// Called by the IR receiver when a complete NEC frame is captured.
-// It decodes the frame and dispatches the resulting command.
+// Called by the IR receiver when a complete NEC frame is captured
+// It decodes the frame and dispatches the resulting command
 void onRawFrame(const IrRawFrame& raw)
 {
     NecFrame frame = decodeNEC(raw);
@@ -58,22 +58,21 @@ void webCommandHandler() {
     address.sin_addr.s_addr = htonl(INADDR_ANY); // Accept connections from any IP address
     address.sin_port = htons(12345); // Listen on port 12345 for incoming UDP packets
 
-    
     // Set a timeout for recvfrom to avoid blocking indefinitely
     // and allow address reuse to avoid "Address already in use" errors on restart
-    int opt = 1;
+    int opt = 1; // 1 true, 0 false
     struct timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
     setsockopt(server_fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    ::bind(server_fd, (struct sockaddr*)&address, sizeof(address));
+    ::bind(server_fd, (struct sockaddr*)&address, sizeof(address)); // Bind the socket to the specified address and port
     
     char buffer[1024];
-    sockaddr_in client_addr;
+    sockaddr_in client_addr; // address from which the command was received
     socklen_t client_len = sizeof(client_addr);
 
-    cout << "[System] Web command thread ready on port 12345..." << std::endl;
+    cout << "[System] Web command thread ready on port 12345..." << endl;
 
     while (running) { 
         memset(buffer, 0, sizeof(buffer));
@@ -87,6 +86,7 @@ void webCommandHandler() {
         string command(buffer);
 
         if (command == "getState") {
+            // Respond with the current state of the system (alarm and lights)
             string stateReply = "ALARM:" + to_string(alarmOn ? 1 : 0) + 
                 "|LMODE:" + to_string(lightsManualMode ? 1 : 0) +
                 "|LIGHTS:" + to_string(lightsOn ? 1 : 0) +
@@ -96,7 +96,6 @@ void webCommandHandler() {
                 "|HEATINGMODE:" + to_string(heatingManualMode ? 1 : 0) + 
                 "|HEATING:" + to_string(heatingOn ? 1 : 0);
 
-            // Respond with the current state of the system (alarm and lights)
             sendto(server_fd, stateReply.c_str(), stateReply.length(), 0, (struct sockaddr*)&client_addr, client_len);
             continue; 
         }
@@ -157,13 +156,21 @@ int main() {
     // Start the web commands handler thread
     thread webThread(webCommandHandler);
 
-    cout << "Press remote PLAY/PAUSE button to turn on the alarm system." << endl;
-    cout << "Press remote POWER button to turn off the whole system." << endl;
+    cout << "Press remote:" << endl 
+        << " POWER button to turn off the whole system" << endl
+        << " PLAY/PAUSE button to turn on the alarm system" << endl
+        << " FUNC/STOP button to toggle lights mode (manual/automatic)" << endl
+        << " 0 button to toggle heating mode (manual/automatic)" << endl
+        << " 1 to toggle lights" << endl
+        << " 2 to toggle gate" << endl
+        << " 3 button to toggle AC mode (manual/automatic)" << endl
+        << " 4 to toggle AC" << endl
+        << " 5 to toggle heating" << endl;
 
     while (running) {
         
         if (armRequested.exchange(false)) {
-            cout << "[Alarm] Alarm system arming requested." << endl;
+            cout << "[Alarm] Alarm system arming requested" << endl;
             toggleAlarmActivation();
         }
 
@@ -192,7 +199,7 @@ int main() {
 
 #ifndef SIM
     // Ensure system is fully stopped before exiting
-    // (stops siren/alarm/lights threads and releases GPIO resources)
+    // stops siren/alarm/lights threads and releases GPIO resources
     shutdownSystem();
 #endif
     cout << "System shut down." << endl;

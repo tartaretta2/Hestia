@@ -9,9 +9,9 @@
 using namespace std;
 
 // NEC protocol timing parameters (in microseconds)
-// Elegoo remote uses NEC: each bit is encoded as a burst (562us) + space (562us for 0, 1687us for 1).
-// Short silence = 562us -> bit 0, long silence = 1687us -> bit 1.
-// A complete frame starts with a leader burst (9000us) + leader space (4500us), followed by 32 bits (address + command).
+// Elegoo remote uses NEC: each bit is encoded as a burst (562us) + space
+// Short silence = 562us -> bit 0, long silence = 1687us -> bit 1
+// A complete frame starts with a leader burst (9000us) + leader space (4500us), followed by 32 bits (address + command)
 #define NEC_LEADER_BURST   9000 // burst that starts the frame
 #define NEC_LEADER_SPACE   4500 // silence after leader burst
 #define NEC_REPEAT_SPACE   2250 // space after leader for repeat frames (held key)
@@ -24,25 +24,23 @@ using namespace std;
 #define IR_MAX_EDGES       128   // max number of edges in a raw frame (leader + 32 bits * 2 edges/bit = 66, plus some margin for noise)
 
 // A single edge detected by the ISR: duration of the previous level and new level after the edge
-// Corresposponds to a transition from HIGH to LOW or vice versa, with the duration of the previous state in microseconds.
+// Corresposponds to a transition, with the duration of the previous state in microseconds
 struct IrEdge {
-   uint32_t duration_us;  // previous level duration in microseconds
-   bool level;        // new level after the edge: true = HIGH, false = LOW
+   uint32_t duration_us; // previous level duration in microseconds
+   bool level; // new level after the edge: true = HIGH, false = LOW
    IrEdge() : duration_us(0), level(false) {}
    IrEdge(uint32_t d, bool l) : duration_us(d), level(l) {}
 };
 
-
-// Raw frame captured by the ISR: a sequence of edges (transitions) with their durations.
-// The count indicates how many edges were captured.
+// Raw frame captured by the ISR: a sequence of edges (transitions) with their duration
+// The count indicates how many edges were captured
 struct IrRawFrame {
-   std::array<IrEdge, IR_MAX_EDGES> edges;
+   array<IrEdge, IR_MAX_EDGES> edges;
    int count = 0;
 };
 
-
-// Type of the callback function that the IR sensor will call when a complete frame is captured and decoded.
-using IrCallback = std::function<void(const IrRawFrame&)>;
+// Type of the callback function that the IR sensor will call when a complete frame is captured and decoded
+using IrCallback = function<void(const IrRawFrame&)>;
 
 
 // Initializes the IR sensor (real HW or simulation) and registers the callback

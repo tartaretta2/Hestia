@@ -15,16 +15,14 @@ extern atomic<bool> gateOpen;
 #ifndef SIM
 static int handle = -1;
 
-// Pulse width (in microsecondi) inviato al servo SG90.
-// 500us  -> 0   (cancello chiuso)
-// 2500us -> 2500 -> 180 (cancello aperto)
+// Pulse width (in microseconds) sent to the SG90 servo
+// 500us  -> 0°   (gate closed)
+// 2500us -> 180° (gate open)
 static const int PULSE_CLOSED = 500;
 static const int PULSE_OPEN = 2500;
-static const int STEP_US = 100;      // ampiezza di ogni passo del movimento
-static const int STEP_DELAY_MS = 15; // pausa tra un passo e l'altro (regola la velocit�)
-static const int SERVO_FREQ_HZ = 50; // frequenza standard per servi hobby
-
-// Stato del cancello, persistente tra le chiamate
+static const int STEP_US = 100;      // step in microseconds for gradual movement of the servo
+static const int STEP_DELAY_MS = 15; // pause between steps (regulates the speed)
+static const int SERVO_FREQ_HZ = 50; // standard frequency for servos
 
 void initGate(const char *gpioChip, const unsigned int gatePin)
 {
@@ -37,14 +35,14 @@ void initGate(const char *gpioChip, const unsigned int gatePin)
     }
     lgGpioClaimOutput(handle, 0, gatePin, 0);
 
-    // Porta il servo in posizione nota (chiuso) all'avvio
+    // Reset servo to closed position
     lgTxServo(handle, gatePin, PULSE_CLOSED, SERVO_FREQ_HZ, 0, 0);
     this_thread::sleep_for(chrono::milliseconds(400));
-    lgTxServo(handle, gatePin, 0, SERVO_FREQ_HZ, 0, 0); // stop pulses: evita jitter/ronzio
+    lgTxServo(handle, gatePin, 0, SERVO_FREQ_HZ, 0, 0); // stop pulses: avoid jitter and noise
     gateOpen = false;
 }
 
-// Muove il servo in modo graduale da 'from' a 'to' (pulse width in microsecondi).
+// Gradually move the servo
 static void sweepServo(const unsigned int gatePin, int from, int to)
 {
     if (from < to)

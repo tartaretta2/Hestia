@@ -20,29 +20,29 @@ static const vector<string> authorizedPlates = {
     "CZ889KF"
 };
 
-// Shared state variables defined in main.cpp
+// shared state atomic (thread-safe) variables
 extern atomic<bool> sirenOn;
 extern atomic<bool> alarmOn;
 extern atomic<bool> running;
 extern atomic<bool> lightsOn;
 extern atomic<bool> gateOpen;
-extern atomic<bool> disarmRequested; //flag set by plate recognition to request disarming the alarm system (checked in main loop)
-extern atomic<bool> armRequested; //flag set by web command to request arming the alarm system (checked in main loop)
+extern atomic<bool> disarmRequested; //set by plate recognition 
+extern atomic<bool> armRequested; //set by web interface 
 extern atomic<bool> lightsManualMode;
-extern atomic<bool> acManualMode; // true when the AC is in manual mode (set by web command)
-extern atomic<bool> heatingManualMode; // true when the heating is in manual mode (set by web command)
-extern atomic<bool> acOn; // true when the AC is on (set by temperature monitor thread)
-extern atomic<bool> heatingOn; // true when the Heating is on (set by temperature monitor thread)
+extern atomic<bool> acManualMode; 
+extern atomic<bool> heatingManualMode; 
+extern atomic<bool> acOn; 
+extern atomic<bool> heatingOn; 
 
-// Threads used for asynchronous tasks
-static thread alarmMSthread;   // thread that blocks on alarm motion-sensor edge events
-static thread lightsThread;    // thread that blocks on lights motion-sensor edge events
-static thread tempThread;      // thread that reads DHT11 periodically and triggers the AC/heating LEDs when threshold are crossed
-static atomic<uint64_t> lightsOffToken(0); // token used to check if thread should turn off lights
+static thread alarmMSthread;   // handles alarm motion-sensor edge events
+static thread lightsThread;    // handles lights motion-sensor edge events
+static thread tempThread;      // polls DHT11 periodically 
+static atomic<uint64_t> lightsOffToken(0); // token used to check whether the thread should turn off lights
 
 void toggleAlarmActivation() {
-    armRequested = false; // Reset the arm request flag
-    disarmRequested = false; // Reset the disarm request flag
+     // Reset the arm/disarm request flags
+    armRequested = false; 
+    disarmRequested = false;
     
     #ifdef SIM
         alarmOn = !alarmOn;
@@ -56,38 +56,30 @@ void toggleAlarmActivation() {
             this_thread::sleep_for(chrono::seconds(1));
         }
         cout << endl;
-        //Start the camera for plate recognition
-              
-        this_thread::sleep_for(chrono::seconds(10)); // Additional wait to ensure motion sensor is stable low before starting the listener and avoid false triggers.
-
+        
+        this_thread::sleep_for(chrono::seconds(10)); //additional wait to ensure motion sensor is stable on low before starting the listener and avoid false triggers
+        
+        //start the camera for plate recognition
         initCameraSystem();
-        // Arm the alarm system: create the GPIO request and start the listener.
+
         if (!initAlarmMS(GPIO_CHIP, ALARM_MS)) {
             cerr << "Unable to arm alarm: motion sensor init failed." << endl;
             return;
         }
 
-        // If the PIR is already active when arming, trigger immediately so
-        // we do not miss the first state after a disarm/re-arm cycle.
-        // if (isAlarmMSActive() && !sirenOn) {
-        //     cout << "Motion already active, triggering siren immediately." << endl;
-        //     toggleSiren();
-        // }
         alarmOn = true; 
 
-        // Start the thread that blocks until a motion edge arrives.
+        // start the thread that blocks until a motion edge arrives
         alarmMSthread = thread(alarmMSListener);
 
     } else {
-        // Disarm the alarm system: stop motion monitoring and release the GPIO request.
+        // disarm the alarm system: stop motion monitoring 
         alarmOn = false;
         sirenOn = false;
 
         if (alarmMSthread.joinable()) alarmMSthread.join();
 
-        // Now it is safe to release the request and free the GPIO resources.
-        cleanupAlarmMS();
-      
+        cleanupAlarmMS();      
         stopCameraSystem();
 
         cout << "Alarm OFF" << endl;
@@ -99,7 +91,6 @@ void toggleSiren() {
     // Only allow siren changes when alarm is armed
     if (!alarmOn) return;
 
-    // Toggle siren state (main loop in main.cpp handles hardware toggling)
     sirenOn = !sirenOn;
     cout << "Siren " << (sirenOn ? "ON" : "OFF") << endl;
 }
@@ -107,8 +98,6 @@ void toggleSiren() {
 void alarmMSListener() {
     cout << "Alarm ON" << endl;
     
-    // Block until an edge event is delivered by the kernel.
-    // No polling loop is used here.
     while (alarmOn) {
         try {
 #ifdef SIM
@@ -118,7 +107,7 @@ void alarmMSListener() {
 #endif
             {
                 if (!sirenOn) {
-                    cout << "Motion detected! Triggering siren." << endl;
+                    cout << "Motion detected! Triggering siren" << endl;
                     toggleSiren();
                 }
             }
@@ -127,18 +116,16 @@ void alarmMSListener() {
         }
     }
 
-    cout << "Motion Sensor Listener stopped." << endl;
+    cout << "Motion sensor listener stopped" << endl;
 }
 
 void lightsMSListener(bool firstEntry) {
 
     cout << "Lights motion sensor listener started." << endl;
 
-    // Listener loop: same pattern as alarm, but always running.
-    // No condition like alarmOn; just loop while the program is running.
     while (running) {
         try {
-            if(lightsManualMode) return; // If manual mode is active, do not start the listener
+            if(lightsManualMode) return; // If manual mode is active quit the listener
 
         #ifdef SIM
             if (simulateMS()) {
@@ -147,24 +134,24 @@ void lightsMSListener(bool firstEntry) {
                     lightsOn = true;
                     cout << "LightsMS: motion detected, lights ON" << endl;
                 }
+                // update the token to cancel any pending lights-off 
                 lightsOffToken.fetch_add(1);
             } else {
                 if (lightsOn) {
-                    // Simulate the falling edge / inactivity timer.
+                    // Simulate the falling edge / inactivity timer
                     auto token = ++lightsOffToken;
                     thread([token]() {
                         this_thread::sleep_for(chrono::seconds(10));
-                        //if (!running) return;
-                        if (lightsManualMode) return; // Skip motion sensor control if lights are manually turned on
-                        if (token == lightsOffToken.load()) {
+                        if (lightsManualMode) return; // Skip motion sensor control if mode is manual
+                        if (token == lightsOffToken.load()) { // only turn off lights if no new motion has been detected since the thread sleep started
                             simulateLED(false);
+                            lightsOn = false;
                         }
                     }).detach();
-                    lightsOn = false;
                     cout << "LightsMS: motion ended, lights OFF scheduled" << endl;
                 }
             }
-            this_thread::sleep_for(chrono::seconds(2)); // SIM: poll every 2 sec
+            this_thread::sleep_for(chrono::seconds(2)); // in simulation check every 2 sec
 #else
             if (firstEntry) {
                 this_thread::sleep_for(chrono::seconds(3)); // Wait a bit before starting to avoid false triggers on startup
@@ -182,19 +169,18 @@ void lightsMSListener(bool firstEntry) {
                 }
                 lightsOffToken.fetch_add(1);
             } else if (edge < 0) {
-                // Falling edge: motion ended, start a 10s one-shot timer.
+                // Falling edge: motion ended, schedule lights off
                 if (lightsOn) {
                     auto token = ++lightsOffToken;
+                    cout << "LightsMS: falling edge, lights OFF scheduled" << endl;
                     thread([token]() {
                         this_thread::sleep_for(chrono::seconds(3));
-                        //if (!running) return;
                         if (lightsManualMode) return; 
                         if (token == lightsOffToken.load()) {
                             setLED(LIGHTS_LED, false);
+                            lightsOn = false;
                         }
                     }).detach();
-                    lightsOn = false;
-                    cout << "LightsMS: falling edge, lights OFF scheduled" << endl;
                 }
             }
 #endif
@@ -210,7 +196,7 @@ void lightsMSListener(bool firstEntry) {
     }
     #endif
 
-    cout << "Lights motion sensor listener stopped." << endl;
+    cout << "Lights motion sensor listener stopped" << endl;
 }
 
 void startLightsListener() {
@@ -328,14 +314,13 @@ void toggleHeating() {
     #endif
 }
 
-// Reads DHT11 periodically and triggers the AC LED when above threshold
+// Reads DHT11 periodically and triggers the AC/heating LEDs when threshold are crossed
 void temperatureMonitor()
 {
     while (running) {
         float temp = 0.0f, hum = 0.0f;
         if (readDHT11(temp, hum)) {
             if(acManualMode && heatingManualMode) {
-                // In manual mode, the AC and heating is controlled by the user, so we don't automatically turn it on/off
                 this_thread::sleep_for(chrono::seconds(3));
                 continue;
             }
@@ -361,7 +346,7 @@ void temperatureMonitor()
                     cout << "[HEATING] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
                     toggleHeating();
                 } else if (!heatingShouldBeOn && heatingOn) {
-                    // transition from cool to hot (turn the heatong off)
+                    // transition from cool to hot (turn the heating off)
                     cout << "[HEATING] Temperature: " << temp << " C | Humidity: " << hum << " %" << endl;
                     toggleHeating();
                 }

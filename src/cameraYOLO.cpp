@@ -12,16 +12,14 @@
 #include <vector>
 #endif
 
-//thread running the camera loop (real detection or simulation)
-static thread cameraThread;
+static thread cameraThread; //thread running the camera loop (real detection or simulation)
 
-//shared alarm flag defined in main.cpp (the camera runs only while armed)
 extern atomic<bool> alarmOn;
 
 #ifndef SIM
 
 //extracts the licence plate text from a detected bounding box and applies OCR
-// returns the cleaned plate string or "" if nothing reliable is read
+//returns the cleaned plate string or "" if nothing reliable is read
 string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
 
     //clamp the detection box to the image bounds to avoid out of range crops
@@ -31,7 +29,8 @@ string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
 
     Mat plate = frame(plateRect).clone();
 
-    //trim the blue side bands (european plates) slightly conservative so we do not cut off parts of the letters
+    //trim the blue side bands (european plates)
+    //slightly conservative so we do not cut off parts of the letters
     int edge_w = plate.cols * 0.06; 
     int edge_h = plate.rows * 0.05; 
     plate = plate(Rect(edge_w, edge_h, plate.cols - 2 * edge_w, plate.rows - 2 * edge_h));
@@ -47,20 +46,20 @@ string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
 
     //contour search (RETR_CCOMP keeps a two-level parent/child hierarchy)
     vector<vector<Point>> contours;
-    vector<Vec4i> hierarchy; // holds the parent-child relationships
+    vector<Vec4i> hierarchy; // holds the parent-child relationships to correctly draw letters with holes
     findContours(plate, contours, hierarchy, RETR_CCOMP, CHAIN_APPROX_SIMPLE);
 
     Mat cleanMask = Mat::zeros(plate.size(), CV_8UC1);
 
     for (size_t i = 0; i < contours.size(); i++) {
-        //hierarchy[i][3] is the parent index (if -1 it is outer contour)
+        //hierarchy[i][3] is the parent index (if -1 it is the outer contour)
         if (hierarchy[i][3] == -1) { 
             Rect r = boundingRect(contours[i]);
             float aspectRatio = (float)r.height / r.width;
 
             //geometric filter for characters: vertical aspect neither too narrow nor too wide and tall enough relative to the plate height
             if (aspectRatio > 1.0 && aspectRatio < 5.0 && r.height > plate.rows * 0.45) {
-                //passing 'hierarchy' and index 'i' lets OpenCV draw the letter together with its inner holes correctly
+                //passing hierarchy and index i lets OpenCV draw the letter together with its inner holes correctly
                 drawContours(cleanMask, contours, i, Scalar(255), FILLED, LINE_8, hierarchy);
             }
         }
@@ -73,9 +72,9 @@ string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
     copyMakeBorder(cleanMask, cleanMask, p, p, p, p, BORDER_CONSTANT, Scalar(255));
 
     //UNCOMMENT TO DEBUG CAMERA
-    // imshow("DEBUG: Maschera Corretta", cleanMask);
+    //imshow("DEBUG: Maschera Corretta", cleanMask);
 
-    // OCR
+    // Optical Character Recognition (OCR) with Tesseract
     api->SetImage(cleanMask.data, cleanMask.cols, cleanMask.rows, 1, cleanMask.step);
     char *outText = api->GetUTF8Text();
     string rawText(outText);
@@ -83,7 +82,7 @@ string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
 
     string cleanedText = "";
     for (char c : rawText) {
-        //discard everything except letters A-Z and digits 0-9
+        //discard everything except whitelisted letters and digits
         if (isalnum(c)) {
             cleanedText += (char)toupper(c);
         }
@@ -102,7 +101,7 @@ string getLicencePlate(Mat& frame, Rect& box, TessBaseAPI* api) {
 void cameraLoop(){
     cout<<"Initializing Camera System" <<endl;
 
-    //load and compile the detection model on CPU
+    //load and compile the detection model
     ov::Core core;
 
     auto model = core.read_model("../models/best.xml");
@@ -146,6 +145,7 @@ void cameraLoop(){
         Mat blob;
         blob = dnn::blobFromImage(frame, 1.0 / 255.0, Size(640, 640), Scalar(), true, false);
 
+        //
         ov::Tensor input_tensor(ov::element::f32, {1, 3, 640, 640}, blob.data);
         infer_request.set_input_tensor(input_tensor);
 
@@ -158,22 +158,19 @@ void cameraLoop(){
         //wrap the raw output as a matrix of detections (rows = candidates)
         Mat detectionMat(300, 6, CV_32F, output_data);
         
-
         vector<float> confidences;
         vector<Rect> boxes;
 
         //scale factors to map the 640x640 coordinates back to the frame size
         float x_factor = frame.cols / INPUT_WIDTH;
         float y_factor = frame.rows / INPUT_HEIGHT;
-
-        
+  
         for (int i = 0; i < detectionMat.rows; i++) {
             
             float confidence = detectionMat.at<float>(i, 4); 
 
             //keep only detections above the score threshold
             if (confidence >= SCORE_THRESHOLD) {
-
 
                 //corner coordinates as returned by the model
                 float x1 = detectionMat.at<float>(i, 0);
@@ -187,7 +184,7 @@ void cameraLoop(){
                 int width = int((x2 - x1) * x_factor);
                 int height = int((y2 - y1) * y_factor);
 
-                cout << "YOLO26 has found a licence plate! Conf: " << confidence 
+                cout << "YOLO26 has found a licence plate! Confidence: " << confidence 
                 << " Box: [" << left << "," << top << "," << width << "," << height << "]" << endl;
 
                 boxes.push_back(Rect(left, top, width, height));
@@ -206,7 +203,7 @@ void cameraLoop(){
             // OCR the surviving box
             string plateText = getLicencePlate(frame, fineBox, api);
             
-            // draw the detection box on the frame
+            //DEBUGGING: draw the detection box on the frame
             //rectangle(frame, boxes[idx], Scalar(0, 255, 0), 3);
             
             if(plateText == ""){
@@ -214,14 +211,15 @@ void cameraLoop(){
             }
             else{
                 //valid plate: log it and hand it to the access-control check
-                cout <<"Licence plate detected: " <<plateText <<endl;
+                cout <<"Licence plate detected: " << plateText << endl;
                 checkPlate(plateText);
-                putText(frame, plateText, Point(fineBox.x, fineBox.y - 35), FONT_HERSHEY_SIMPLEX, 0.9, Scalar(255, 255, 255), 2);
+                //DEBUGGING: display the recognized plate text on the frame
+                //putText(frame, plateText, Point(fineBox.x, fineBox.y - 35), FONT_HERSHEY_SIMPLEX, 0.9, Scalar(255, 255, 255), 2);
             }
             
-            //overlay the confidence value next to the box
-            // string label = "LICENCE PLATE: " + to_string(confidences[idx]).substr(0, 4);
-            // putText(frame, label, Point(boxes[idx].x, boxes[idx].y - 10), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 1);
+            //DEBUGGING: overlay the confidence value next to the box
+            //string label = "LICENCE PLATE: " + to_string(confidences[idx]).substr(0, 4);
+            //putText(frame, label, Point(boxes[idx].x, boxes[idx].y - 10), FONT_HERSHEY_SIMPLEX, 0.8, Scalar(0, 255, 0), 1);
         }
 
         //UNCOMMENT TO DEBUG CAMERA
@@ -236,7 +234,7 @@ void cameraLoop(){
 }
 
 
-// simulation mode (no camera)
+//simulation mode (no camera)
 //after 7s of simulated observation it simulates the recognition of a plate
 #else
 
@@ -245,7 +243,7 @@ void cameraLoop(){
 static void cameraLoopSim(){
     cout << "[CAMERA SIM] Initialized. Licence plate recognized in ~7 seconds..." << endl;
 
-    //wait 7s: if the alarm is disarmed meanwhile the thread
+    //wait 7s: if the alarm is disarmed while the thread is running
     // exits immediately, so the join in stopCameraSystem() never blocks
     for (int i = 0; i < 7 && alarmOn; i++) {
         this_thread::sleep_for(chrono::milliseconds(1000));

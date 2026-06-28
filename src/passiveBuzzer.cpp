@@ -17,12 +17,13 @@ void initBuzzer(const char* gpioChip, const unsigned int buzzerPin){
     handle = lgGpiochipOpen(4);
     cout << "Initializing BUZZER on pin: " << buzzerPin << endl;
     if (handle < 0) {
-        std::cerr << "Failed to open GPIO chip" << std::endl;
+        cerr << "Failed to open GPIO chip" << endl;
         return;
     }
     lgGpioClaimOutput(handle, 0, buzzerPin, 0);
 }
 
+// siren
 void toggleBuzzer(const unsigned int buzzerPin){
     int freq;
     for(freq = 800; freq <= 1200; freq += 10){

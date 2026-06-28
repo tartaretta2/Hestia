@@ -6,11 +6,11 @@ app = Flask(__name__)
 CPP_IP = "127.0.0.1"  
 CPP_PORT = 12345      
 
-# Send a command to the C++ server and optionally wait for a reply
+# Send a command to the C++ core and optionally wait for a reply
 def sendCommand(action, expect_reply=False):
     try:
-        sckt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        # If the C++ server doesn't respond within 1 second, it will timeout
+        sckt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # AF_INET for IPv4, SOCK_DGRAM for UDP
+        #timeout if the C++ server doesn't respond within 1 second
         sckt.settimeout(1.0) 
         sckt.sendto(action.encode('utf-8'), (CPP_IP, CPP_PORT))
         
@@ -23,19 +23,21 @@ def sendCommand(action, expect_reply=False):
     except Exception as e:
         return f"ERROR: {str(e)}"
 
+#get the current state of the system from the C++ core
 @app.route('/api/getState', methods=['GET'])
 def get_state():
     reply = sendCommand("getState", expect_reply=True)
     
     if reply.startswith("ALARM"):
         state = {}
-        for part in reply.split('|'): # expected format: "ALARM:1|LIGHTS:0"
+        for part in reply.split('|'): # expected format: ALARM:1|LIGHTS:0 ...
             key, val = part.split(':')
             state[key] = True if val == "1" else False
         return jsonify({"status": "success", "data": state})
         
     return jsonify({"status": "error", "message": "Error getting state from C++"})
 
+#send a command to the C++ core
 @app.route('/api/<command>', methods=['POST'])
 def send_command(command):
     reply = sendCommand(command, expect_reply=True)
@@ -191,10 +193,10 @@ def home():
                 .then(data => {
                     const statusDiv = document.getElementById('connectionStatus');
                     if(data.status === 'success') {
-                        statusDiv.innerText = "🟢 SYSTEM LINK ACTIVE";
+                        statusDiv.innerText = "🟢 SYSTEM ONLINE";
                         statusDiv.className = "bg-slate-900/90 border border-emerald-500/30 px-6 py-2 rounded-full text-[10px] font-tech tracking-widest text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)] text-center mt-8 min-w-[240px] whitespace-nowrap";
                         
-                        // --- ALLARME ---
+                        // alarm
                         const alarmBtn = document.getElementById('btnAlarm');
                         if (data.data.ALARM) {
                             alarmBtn.innerText = '🚨 DISARM ALARM';
@@ -204,7 +206,7 @@ def home():
                             alarmBtn.className = "w-full bg-slate-800/60 hover:bg-slate-800 border border-slate-700 text-slate-300 font-semibold py-4 rounded-xl transition-all duration-300 tracking-wide font-tech text-sm";
                         }
                         
-                        // --- CANCELLO ---
+                        // gate
                         const gateBtn = document.getElementById('btnGate');
                         if (data.data.GATE) {
                             gateBtn.innerText = '🚪 CLOSE GATE';
@@ -214,7 +216,7 @@ def home():
                             gateBtn.className = "w-full bg-slate-800/60 hover:bg-slate-800 border border-slate-700 text-slate-300 font-semibold py-4 rounded-xl transition-all duration-300 tracking-wide font-tech text-sm";
                         }
 
-                        // --- LUCI ---
+                        // lights
                         document.getElementById('switchLightMode').checked = !data.data.LMODE; 
                         document.getElementById('btnToggleLightMode').innerText = data.data.LMODE ? 'Motion' : 'Manual'; 
 
@@ -232,7 +234,7 @@ def home():
                             lightsBtn.disabled = true;
                         }
 
-                        // --- ARIA CONDIZIONATA ---
+                        // AC
                         document.getElementById('switchACMode').checked = !data.data.ACMODE;
                         document.getElementById('btnToggleACMode').innerText = data.data.ACMODE ? 'Auto' : 'Manual';
 
@@ -250,7 +252,7 @@ def home():
                             acBtn.disabled = true;
                         }
 
-                        // --- RISCALDAMENTO ---
+                        // heating
                         if (data.data.HEATINGMODE !== undefined) {
                             document.getElementById('switchHeatingMode').checked = !data.data.HEATINGMODE;
                             document.getElementById('btnToggleHeatingMode').innerText = data.data.HEATINGMODE ? 'Auto' : 'Manual';
