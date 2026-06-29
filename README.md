@@ -21,7 +21,7 @@ The project can be built in two modes:
 ## Presentation & Video
 
 - 📊 **PowerPoint presentation:** [`HestiaV1-Presentation.pdf`](./HestiaV1-Presentation.pdf)
-- ▶️ **YouTube video:** _[add link here]_
+- ▶️ **YouTube video:** [`Hestia - Smart home control`](https://youtu.be/kCSJbAhGXm8?si=cAvVg5MJny2lQbqT)
 
 ---
 
