@@ -1,6 +1,6 @@
-# Hestia — Smart Home System
+# Hestia — Smart home control
 
-Smart house project for the **Embedded Software for the Internet of Things** course @ University of Trento.
+Smart house project for the **Embedded Software for the Internet of Things** course at the University of Trento.
 
 Hestia turns a Raspberry Pi 5 into the controller of a small smart house. A single C++ application coordinates every subsystem, while a lightweight Python/Flask web app exposes a remote control panel. The house can be operated in three ways at the same time: through physical sensors, through an infrared remote and through the web interface.
 
@@ -20,7 +20,7 @@ The project can be built in two modes:
 
 ## Presentation & Video
 
-- 📊 **PowerPoint presentation:** [`HestiaV1-Presentation.pdf`](./HestiaV1-Presentation.pdf)
+- 📊 **PowerPoint presentation:** [`HestiaV1-Presentation.pdf`](/docs/HestiaV1-Presentation.pdf)
 - ▶️ **YouTube video:** [`Hestia - Smart home control`](https://youtu.be/kCSJbAhGXm8?si=cAvVg5MJny2lQbqT)
 
 ---
@@ -29,9 +29,9 @@ The project can be built in two modes:
 
 ### Hardware Requirements
 
-The reference setup runs on a **Raspberry Pi 5** wired according to the diagram in [`HestiaCircuit.pdf`](./HestiaCircuit.pdf).
+The reference setup runs on a **Raspberry Pi 5** wired according to the diagram in [`HestiaCircuit.jpg`](/docs/HestiaCircuit.jpg).
 
-![circuit image](./HestiaCircuit.jpg)
+![circuit image](/docs/HestiaCircuit.jpg)
 
 | Component | Role | Default GPIO (BCM) |
 |---|---|---|
@@ -50,7 +50,7 @@ The reference setup runs on a **Raspberry Pi 5** wired according to the diagram 
 | 2N2222 Transistor | AC fan transistor | 23 |
 | Fan blade and 3-6V motor | AC fan | - |
 
-> Pin assignments are defined in [`include/houseControl.h`](./include/houseControl.h) and can be changed there.
+> Pin assignments are defined in [`include/houseControl.h`](/include/houseControl.h) and can be changed there.
 
 > **Note:** the DHT11 is read through the kernel **IIO** interface (`/sys/bus/iio/.../in_temp_input` and `in_humidityrelative_input`), so the corresponding device-tree overlay must be enabled on the Pi.
 
@@ -63,7 +63,7 @@ The reference setup runs on a **Raspberry Pi 5** wired according to the diagram 
 
 **To run on the Raspberry Pi 5 (`release` build):**
 - `g++` with C++17 support and `make`
-- [`libgpiod`](https://git.kernel.org/pub/scm/libs/libgpiod/libgpiod.git/) **v2** (`-lgpiod`) — GPIO / edge-event handling
+- [`libgpiod`](https://libgpiod.readthedocs.io/en/master/index.html) (`-lgpiod`) — GPIO / edge-event handling
 - [`lgpio`](https://abyz.me.uk/lg/lgpio.html) (`-llgpio`) — PWM (buzzer) and servo control
 - [OpenVINO](https://docs.openvino.ai/) — runs the YOLO plate-detection model
 - [OpenCV 4](https://opencv.org/) (`opencv4` via `pkg-config`) — image processing
@@ -82,8 +82,12 @@ The reference setup runs on a **Raspberry Pi 5** wired according to the diagram 
 Hestia/
 ├── README.md
 ├── Makefile                      # build rules: `sim` and `release`
-├── PinDiagram_RaspberryPi5.jpg   # Raspberry Pi 5 pin diagram
-├── HestiaCircuit.pdf             # circuit wiring diagram
+├── .gitignore                    # ignore build artifacts and temporary files
+│
+├── docs/                         # documentation
+│   ├── HestiaV1-Presentation.pdf # slides for the final presentation
+│   ├── PinDiagram_RaspberryPi5.jpg # Raspberry Pi 5 pin diagram
+│   └── HestiaCircuit.jpg         # circuit wiring diagram (image)
 │
 ├── include/                      # public headers / module interfaces
 │   ├── houseControl.h            # GPIO pin map + high-level control API
@@ -121,20 +125,9 @@ Hestia/
 
 ### Architecture overview
 
-```
-        IR Remote ──┐
-                    ├──► main.cpp  (global atomic state + main loop)
-   Web UI (Flask) ──┘            │
-        server.py  ──UDP:12345──►│
-                                 ├──► houseControl.cpp  (orchestrator)
-                                 │         ├── alarm + siren
-   Sensors / Actuators ◄─────────┤         ├── lights (auto / manual)
-   (PIR, LED, buzzer,            │         ├── gate (servo)
-    DHT11, servo, camera)        │         ├── AC / heating (DHT11)
-                                 │         └── camera (YOLO + plate OCR)
-```
+![Architecture diagram](/docs/HestiaArchitecture.png)
 
-The application keeps the whole house state in a set of thread-safe `std::atomic` flags defined in `main.cpp` (e.g. `alarmOn`, `sirenOn`, `lightsOn`, `gateOpen`, `acOn`, `heatingOn`). Three independent command sources — the **IR remote**, the **web UI** (via a UDP server on port `12345`) and the **sensor threads** — update this shared state, while the main loop and the listener threads react to it. The Flask server (`server.py`) only acts as a REST → UDP bridge to the C++ core.
+The application keeps the whole house state in a set of thread-safe `atomic` flags defined in `main.cpp` (e.g. `alarmOn`, `lightsOn`, `gateOpen`, `acManualMode`). Three independent command sources — the **IR remote**, the **web UI** (via a UDP server on port `12345`) and the **sensor threads** — update this shared state, while the main loop and the listener threads react to it.
 
 ---
 
