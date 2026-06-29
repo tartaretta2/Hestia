@@ -33,24 +33,24 @@ The reference setup runs on a **Raspberry Pi 5** wired according to the diagram 
 
 ![circuit image](/docs/HestiaCircuit.jpg)
 
-| Component | Role | Default GPIO (BCM) |
+| Component | Role | GPIO Pin |
 |---|---|---|
 | Raspberry Pi 5 | Main controller | — |
 | PIR motion sensor (alarm) | Intrusion detection | 17 |
 | PIR motion sensor (lights) | Presence detection for lighting | 26 |
 | Passive buzzer | Alarm siren | 27 |
-| LED — alarm | Alarm/siren indicator | 22 |
+| LED — alarm | Alarm siren indicator | 22 |
 | LED — lights | Lighting | 16 |
-| LED — air conditioning | AC actuator indicator | 23 |
-| LED — heating | Heating actuator indicator | 5 |
+| LED — AC | AC status indicator | 23 |
+| LED — heating | Heating status indicator | 5 |
 | IR receiver | Remote-control input | 25 |
 | Servo motor (SG90) | Gate open/close | 24 |
-| DHT11 | Temperature + humidity sensor | (kernel IIO driver) |
+| DHT11 | Temperature + humidity sensor | 6 (kernel IIO driver) |
 | USB webcam | License-plate capture | `/dev/video0` |
 | 2N2222 Transistor | AC fan transistor | 23 |
 | Fan blade and 3-6V motor | AC fan | - |
 
-> Pin assignments are defined in [`include/houseControl.h`](/include/houseControl.h) and can be changed there.
+> Pin assignments are defined in [`houseControl.h`](/include/houseControl.h) and can be changed there.
 
 > **Note:** the DHT11 is read through the kernel **IIO** interface (`/sys/bus/iio/.../in_temp_input` and `in_humidityrelative_input`), so the corresponding device-tree overlay must be enabled on the Pi.
 
@@ -59,7 +59,7 @@ The reference setup runs on a **Raspberry Pi 5** wired according to the diagram 
 **To run in simulation mode (any machine, no hardware):**
 - `g++` with C++17 support
 - `make`
-- POSIX threads (`-lpthread`)
+- threads (`-lpthread`)
 
 **To run on the Raspberry Pi 5 (`release` build):**
 - `g++` with C++17 support and `make`
@@ -86,31 +86,31 @@ Hestia/
 │
 ├── docs/                         # documentation
 │   ├── HestiaV1-Presentation.pdf # slides for the final presentation
+│   ├── HestiaArchitecture.png    # system architecture representation
 │   ├── PinDiagram_RaspberryPi5.jpg # Raspberry Pi 5 pin diagram
 │   └── HestiaCircuit.jpg         # circuit wiring diagram (image)
 │
 ├── include/                      # public headers / module interfaces
-│   ├── houseControl.h            # GPIO pin map + high-level control API
-│   ├── motion_sensor.h           # PIR sensor interface
+│   ├── houseControl.h            # GPIO pin map + high-level control APIs
+│   ├── motion_sensor.h           # PIR motion sensors interface
 │   ├── led.h                     # LED control interface
-│   ├── buzzer.h                  # buzzer/siren interface
+│   ├── buzzer.h                  # buzzer interface
 │   ├── ir_sensor.h               # NEC timing params + raw IR capture
 │   ├── ir_decoder.h              # NEC frame decoding interface
-│   ├── ir_remote.h               # remote key codes -> actions mapping
-│   ├── gate.h                    # servo gate interface
+│   ├── ir_remote.h               # remote key codes to map actions
+│   ├── gate.h                    # servo motor interface
 │   ├── Dht11.h                   # temperature/humidity sensor interface
-│   └── cameraYOLO.h              # camera + plate-recognition interface
+│   └── cameraYOLO.h              # camera + plate recognition interface
 │
 ├── src/                          # implementation
-│   ├── main.cpp                  # entry point: global state, main loop, UDP web-command thread, temperature monitor
+│   ├── main.cpp                  # entry point: global state, main loop, UDP web-command thread
 │   ├── houseControl.cpp          # orchestrator: alarm/siren/lights/gate/AC/heating logic + plate access control
 │   ├── motion_sensor.cpp         # PIR motion sensors via libgpiod edge events
 │   ├── led.cpp                   # LED actuators via libgpiod
-│   ├── activeBuzzer.c            # active-buzzer driver (libgpiod, on/off)
-│   ├── passiveBuzzer.cpp         # passive-buzzer siren (lgpio PWM sweep)
+│   ├── passiveBuzzer.cpp         # passive-buzzer siren (lgpio PWM)
 │   ├── ir_sensor.cpp             # interrupt-driven NEC raw-frame capture
 │   ├── ir_decoder.cpp            # NEC protocol decoder (leader, 32 bits, checksum, debounce)
-│   ├── ir_remote.cpp             # key->action table and dispatch
+│   ├── ir_remote.cpp             # key to action mapping table and dispatch
 │   ├── gate.cpp                  # SG90 servo gate (gradual sweep) via lgpio
 │   ├── Dht11.cpp                 # DHT11 reader via kernel IIO sysfs
 │   ├── cameraYOLO.cpp            # OpenVINO YOLO detection + Tesseract OCR
@@ -144,7 +144,7 @@ The whole C++ application is built with the provided [`Makefile`](./Makefile). T
 make sim
 ```
 
-This defines the `-DSIM` macro, excludes all the hardware libraries and links only against pthreads. Sensors, IR keys and the camera are faked in software, so you can test the whole control logic on a normal PC.
+This defines the `-DSIM` macro, excludes all the hardware libraries and links only pthreads. Sensors, IR keys and the camera are faked in software, so you can test the whole control logic on a normal PC.
 
 **Release mode** (on the Raspberry Pi 5, with all hardware connected):
 
@@ -152,7 +152,7 @@ This defines the `-DSIM` macro, excludes all the hardware libraries and links on
 make release
 ```
 
-This links against `libgpiod`, `lgpio`, OpenVINO, OpenCV and Tesseract and drives the real GPIO pins, servo and camera.
+This links `libgpiod`, `lgpio`, OpenVINO, OpenCV and Tesseract and drives the real GPIO pins, servo and camera.
 
 To clean the build artifacts:
 
@@ -175,7 +175,7 @@ cd ~/Hestia
 make release
 ```
 
-Make sure the wiring matches [`HestiaCircuit.pdf`](./HestiaCircuit.pdf) and that the DHT11 IIO overlay is enabled before running.
+Make sure the wiring matches [`HestiaCircuit.pdf`](/docs/HestiaCircuit.pdf) and that the DHT11 IIO overlay is enabled before running.
 
 ### 3. Run
 
@@ -189,7 +189,7 @@ Start the C++ core (it also opens the UDP command server on port `12345`):
 cd build
 ./hestiaV1
 ```
-> The camera loop loads the model from `../models/best.xml` (relative path), so on the real hardware run the binary from the `build/` directory (or adjust the path accordingly).
+> The camera loop loads the model from `../models/best.xml` (relative path), so on the real hardware make sure to run the binary from the `build/` directory (or adjust the path accordingly).
 
 In a second terminal, start the web interface:
 
@@ -198,7 +198,7 @@ cd src
 python3 server.py
 ```
 
-Then open a browser at **`http://localhost:5678`** to reach the Hestia control panel.
+Then open a browser at **`http://<hostIP>:5678`** to reach the Hestia control panel.
 
 ---
 
@@ -208,7 +208,7 @@ Once `hestiaV1` is running you can control the house in three ways.
 
 ### A) Web interface
 
-Open `http://localhost:5678`. The dashboard shows live status (it polls the system every 1.5s) and lets you:
+Open `http://<hostIP>:5678`. The dashboard shows live status (it polls the system every 1.5s) and lets you:
 
 | Card | Control | Effect |
 |---|---|---|
@@ -240,8 +240,8 @@ Open `http://localhost:5678`. The dashboard shows live status (it polls the syst
 
 - **Alarm:** when armed, any motion detected by the alarm PIR triggers the siren (LED blink + buzzer sweep).
 - **Lights (auto mode):** motion turns the lights on; after motion ends they switch off following a short delay.
-- **Climate (auto mode):** the DHT11 is polled periodically — the **AC turns on above 31 °C**, the **heating turns on below 30 °C**.
-- **License-plate recognition:** while the alarm is armed, the webcam continuously looks for license plates. When an **authorized plate** (configured in `houseControl.cpp`, default `CZ889KF`) is recognized, the system disarms the alarm and automatically opens the gate for ~10s before closing it again.
+- **Climate (auto mode):** the DHT11 is polled periodically — the **AC turns on above `AC_THRESHOLD_C`**, the **heating turns on below `HEATING_THRESHOLD_C`** (defined in [`houseControl.h`](/include/houseControl.h)).
+- **License-plate recognition:** while the alarm is armed, the webcam continuously looks for license plates. When an **authorized plate** (configured in [`houseControl.cpp`](/src/houseControl.cpp), default `CZ889KF`) is recognized, the system disarms the alarm and automatically opens the gate for ~10s before closing it again.
 
 ### Shutting down
 
